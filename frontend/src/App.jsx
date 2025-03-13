@@ -92,6 +92,7 @@ function App() {
   };
 
   return (
+    /*FIXME: ЭТО ЧЕ НАХУЙ ТАКОЕ БЛЯТЬ?!?!?!? ДЛЯ КОГО CSS ПРИДУМАЛИ, ДИБИЛЫЧ СУКА?!?!? ЧТОБ РАЗОБРАЛСЯ И ПОФИКСИЛ НАХУЙ*/ 
     <div className="flex flex-col h-screen bg-gray-900 text-white">
       {/* Header */}
       <header className="p-4 border-b border-gray-700 flex justify-between items-center rounded-[25px] m-4">
@@ -213,6 +214,7 @@ function App() {
               <li key={model.name} className="flex justify-between items-center">
                 <span>{model.name}</span>
                 {model.installed ? (
+                  /* FIXME: Кста, тут отступа не хватает от правого края */
                   <span className="text-sm text-green-400">Установлена</span>
                 ) : (
                   <button

@@ -1,5 +1,7 @@
+/.idea/
 /backend/__pycache__
 /frontend/node_modules/.bin
 /frontend/node_modules
 /backend/__pycache__
 backend/__pycache__/main.cpython-310.pyc
+/models/
