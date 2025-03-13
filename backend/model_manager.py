@@ -1,67 +1,60 @@
 import os
-from huggingface_hub import hf_hub_download
+import time
 from typing import List, Dict
-import logging
-
-logger = logging.getLogger(__name__)
+from huggingface_hub import HfApi
 
 MODELS_DIR = "models"
-
+CACHE_TIME = 1800  # 30 минут кеширования
+api = HfApi()
+cache = {"models": [], "last_update": 0}
 
 class ModelManager:
     def __init__(self):
         self.ensure_models_dir()
 
     def ensure_models_dir(self):
+        global MODELS_DIR  # Явно указываем, что это глобальная переменная
         os.makedirs(MODELS_DIR, exist_ok=True)
 
     def get_available_models(self) -> List[Dict]:
-        return [
-            {
-                "name": "Mistral-7B-Instruct",
-                "repo_id": "TheBloke/Mistral-7B-Instruct-v0.1-GGUF",
-                "file_name": "mistral-7b-instruct-v0.1.Q4_K_M.gguf",
-                "required_space": 4700000000  # ~4.7GB
-            },
-            {
-                "name": "Llama-2-7B-Chat",
-                "repo_id": "TheBloke/Llama-2-7B-Chat-GGUF",
-                "file_name": "llama-2-7b-chat.Q4_K_M.gguf",
-                "required_space": 3800000000  # ~3.8GB
-            }
-        ]
+        current_time = time.time()
+        if cache["models"] and (current_time - cache["last_update"] < CACHE_TIME):
+            return cache["models"]  # Если кеш свежий, возвращаем его
+
+        try:
+            models = api.list_models(filter="gguf", limit=20)  # Запрашиваем ТОЛЬКО GGUF модели
+            available_models = [
+                {
+                    "name": model.id,
+                    "repo_id": model.id,
+                    "file_name": self.get_gguf_filename(model.id),
+                }
+                for model in models
+            ]
+
+            cache["models"] = available_models
+            cache["last_update"] = current_time  # Обновляем кеш
+            return available_models
+        except Exception as e:
+            print(f"Ошибка при получении моделей: {e}")
+            return []
+
+    def get_gguf_filename(self, repo_id: str) -> str:
+        try:
+            files = api.list_repo_files(repo_id)
+            for file in files:
+                if file.endswith(".gguf"):
+                    return file
+        except Exception as e:
+            print(f"Ошибка при поиске файлов в {repo_id}: {e}")
+        return ""
 
     def get_model_path(self, model_name: str) -> str:
-        model_info = next((m for m in self.get_available_models() if m["name"] == model_name), None)
+        available_models = self.get_available_models()
+        model_info = next((m for m in available_models if m["name"] == model_name), None)
+
         if not model_info:
-            raise ValueError(f"Модель {model_name} не найдена")
+            raise ValueError(f"Модель {model_name} не найдена на Hugging Face.")
 
-        local_path = os.path.join(MODELS_DIR, model_info["file_name"])
-        if not os.path.exists(local_path):
-            self.download_model(model_info)
-
+        local_path = os.path.join(MODELS_DIR, model_info["file_name"])  # Используем глобальную переменную
         return local_path
-
-    def download_model(self, model_info: Dict):
-        logger.info(f"Начата загрузка модели {model_info['name']}...")
-        try:
-            hf_hub_download(
-                repo_id=model_info["repo_id"],
-                filename=model_info["file_name"],
-                local_dir=MODELS_DIR,
-                local_dir_use_symlinks=False,
-                resume_download=True,
-                token=os.getenv("HF_TOKEN"),
-                cache_dir=MODELS_DIR
-            )
-            logger.info(f"Модель {model_info['name']} успешно загружена")
-        except Exception as e:
-            logger.error(f"Ошибка загрузки: {str(e)}")
-            raise RuntimeError(f"Не удалось загрузить модель: {str(e)}")
-
-    def check_model_installed(self, model_name: str) -> bool:
-        try:
-            path = self.get_model_path(model_name)
-            return os.path.exists(path)
-        except:
-            return False

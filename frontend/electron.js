@@ -7,11 +7,11 @@ function createWindow() {
     height: 800,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
     }
   });
 
-  // Load the React app
+  // Если в режиме разработки – загружаем URL, иначе – билд
   if (process.env.NODE_ENV === 'development') {
     win.loadURL('http://localhost:3000');
     win.webContents.openDevTools();
@@ -24,14 +24,10 @@ app.whenReady().then(() => {
   createWindow();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  if (process.platform !== 'darwin') app.quit();
 });
