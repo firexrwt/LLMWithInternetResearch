@@ -12,7 +12,7 @@ class ModelRequestBody(BaseModel):
 class MessageRequestBody(BaseModel):
     message: str
 
-class ModelRequestBody(BaseModel):
+class QueryRequestBody(BaseModel):
     text: str
     model: str = "Mistral-7B-Instruct"
     use_internet: bool = False
