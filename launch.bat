@@ -1,9 +1,14 @@
 @echo off
-cd /d "%~dp0"
+pushd %~dp0
+echo Запуск виртуального окружения...
+call .venv\Scripts\activate
 
-:: Запускаем Uvicorn в фоне
-start /B uvicorn backend.main:app --host 127.0.0.1 --port 9015
+echo Запуск бэкенда...
+start cmd /k "uvicorn backend.main:app --host 127.0.0.1 --port 9015"
 
-:: Переходим в папку фронтенда и запускаем его
+echo Запуск фронтенда...
 cd frontend
-npm start
+start cmd /k "npm start"
+
+popd
+exit

@@ -1,0 +1,161 @@
+/* Контейнер приложения */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #1a1a1a;
+  color: white;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Заголовок */
+.header {
+  width: 90%;
+  max-width: 800px;
+  padding: 16px;
+  border-bottom: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 25px;
+  margin-top: 16px;
+}
+
+/* Чат */
+.chat-container {
+  width: 90%;
+  max-width: 800px;
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Поле ввода */
+.input-container {
+  width: 90%;
+  max-width: 800px;
+  padding: 16px;
+  border-top: 1px solid #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+/* Выпадающий список моделей */
+.model-selector {
+  background-color: #222;
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 15px 0 0 15px;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Поле ввода текста */
+.input-field {
+  flex: 1;
+  background-color: #222;
+  color: white;
+  padding: 12px;
+  height: 50px;
+  border: none;
+  resize: none;
+}
+
+/* Кнопка отправки */
+.send-button {
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+  padding: 12px;
+  border-radius: 0 15px 15px 0;
+  cursor: pointer;
+}
+
+.send-button:hover {
+  background-color: #0056b3;
+}
+
+/* Кнопка управления моделями */
+.manage-models-button {
+  background-color: #444;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 25px;
+  cursor: pointer;
+}
+
+.manage-models-button:hover {
+  background-color: #555;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal {
+  background-color: #222;
+  padding: 20px;
+  border-radius: 15px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 400px; /* Максимальная высота */
+  overflow-y: auto;  /* Добавляем прокрутку */
+  text-align: center;
+}
+
+.model-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 10px 0;
+  padding: 10px;
+  border-bottom: 1px solid #333;
+}
+
+.model-info {
+  text-align: left;
+}
+
+.model-details {
+  font-size: 0.9rem;
+  color: #ccc;
+}
+
+.model-action-button {
+  padding: 6px 12px;
+  border-radius: 15px;
+  border: none;
+  cursor: pointer;
+  color: white;
+}
+
+.model-action-button.install {
+  background-color: #007bff;
+}
+
+.model-action-button.install:hover {
+  background-color: #0056b3;
+}
+
+.model-action-button.delete {
+  background-color: #d9534f;
+}
+
+.model-action-button.delete:hover {
+  background-color: #c9302c;
+}
