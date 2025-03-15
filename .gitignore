@@ -12,3 +12,6 @@ backend/__pycache__/main.cpython-310.pyc
 *.pyc
 /backend/__pycache__
 /.idea
+backend/__pycache__/main.cpython-310.pyc
+backend/__pycache__/model_manager.cpython-310.pyc
+*.pyc

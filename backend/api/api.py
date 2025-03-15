@@ -1,30 +1,38 @@
 import os
+import logging
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from backend.model_manager import ModelManager
 from llama_cpp import Llama
-import logging
-from pydantic import BaseModel
 
-#Тела запросов
+# Настраиваем логирование
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Создаём API-роутер
+router = APIRouter()
+
+# Менеджер моделей и глобальная переменная для текущей модели
+model_manager = ModelManager()
+llm_instance = None
+
+# Классы для валидации запросов
 class ModelRequestBody(BaseModel):
-    model: str
-
-class MessageRequestBody(BaseModel):
-    message: str
+    model: str  # Название модели для загрузки
 
 class QueryRequestBody(BaseModel):
-    text: str
-    model: str = "Mistral-7B-Instruct"
-    use_internet: bool = False
+    text: str  # Текст запроса
+    model: str  # Выбранная модель
+    use_internet: bool = False  # Использовать ли веб-поиск (пока заглушка)
+    max_tokens: int = 512
+    temperature: float = 0.7
+    top_p: float = 0.9
 
-logger = logging.getLogger(__name__)
-router = APIRouter()
-model_manager = ModelManager()
-llm_instance = None  # Глобальная переменная для текущей модели
 
+# Получение списка доступных моделей
 @router.get("/models")
-async def list_available_models():          # Получает список доступных моделей с Hugging Face. Для каждой модели добавляем флаг installed: True, если локальный файл существует.
-    
+async def list_available_models():
+    # Получает список всех доступных моделей (локально и на Hugging Face).
     try:
         models = model_manager.get_available_models()
         for model in models:
@@ -32,11 +40,13 @@ async def list_available_models():          # Получает список до
             model["installed"] = os.path.exists(local_path)
         return models
     except Exception as e:
-        logger.error(f"Ошибка при получении моделей: {str(e)}")
-        raise HTTPException(status_code=500, detail="Ошибка при получении списка моделей.")
+        logger.error(f"Ошибка при получении списка моделей: {str(e)}")
+        raise HTTPException(status_code=500, detail="Ошибка при получении моделей.")
 
+# Установка модели (скачивание)
 @router.post("/install_model")
-async def install_model(request: ModelRequestBody):         # Загружает модель, если она ещё не установлена.
+async def install_model(request: ModelRequestBody):
+    # Скачивает модель, если её ещё нет локально.
     try:
         local_path = model_manager.download_model(request.model)
         return {"message": f"Модель {request.model} установлена", "local_path": local_path}
@@ -44,54 +54,45 @@ async def install_model(request: ModelRequestBody):         # Загружает
         logger.error(f"Ошибка установки модели: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Ошибка установки модели: {str(e)}")
 
-@router.post("/load_model")
-async def switch_model(request: ModelRequestBody):          # Переключает текущую модель.
+# Переключение на другую модель
+def load_model(model_name: str):
+    # Загружает модель LLaMA в память
     global llm_instance
     try:
-        model_path = model_manager.get_model_path(request.model)
-        logger.info(f"Загружаем модель: {request.model}")
+        model_path = model_manager.get_model_path(model_name)
+        logger.info(f"Загружаем модель: {model_name}")
         llm_instance = Llama(model_path=model_path, n_ctx=2048, n_threads=8)
-        return {"message": f"Модель {request.model} загружена"}
     except Exception as e:
         logger.error(f"Ошибка загрузки модели: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Ошибка загрузки модели: {str(e)}")
 
-@router.post("/summarize_chat_title")
-async def summarize_chat_title(request: MessageRequestBody):        # Генерирует краткое название чата (3-4 слова) на основе первого сообщения.
-    global llm_instance
-    if not llm_instance:
-        raise HTTPException(status_code=500, detail="Модель не загружена")
 
-    try:
-        prompt = f"Summarize the following message in 3-4 words:\n\n{request.message}\n\nSummary:"
-        response = llm_instance(prompt, max_tokens=10, temperature=0.5, echo=False)
-
-        summary = response["choices"][0]["text"].strip()
-        if not summary:
-            summary = "Untitled Chat"
-
-        return {"title": summary}
-    except Exception as e:
-        logger.error(f"Ошибка генерации заголовка: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-#TODO: Сделать учет выбранной модели.
-#FIXME: Избавится от ошибки при отправки сообщения (думаю это решится, как сделаем TODO)
+# Запрос в модель
 @router.post("/query")
-async def process_query(request: ModelRequestBody):         # Обрабатывает запрос пользователя через LLaMA. Если текущая модель не совпадает с выбранной, происходит переключение.
+async def process_query(request: QueryRequestBody):
+    # Обрабатывает запрос пользователя через LLaMA.
     global llm_instance
-    if not llm_instance:
-        raise HTTPException(status_code=500, detail="Модель не загружена")
+
+    logger.info(f"Получен запрос: {request}")
+    logger.info(f"Выбранная модель: {request.model}")
 
     try:
+        # Проверяем, загружена ли модель
+        if not llm_instance or llm_instance.model_path != model_manager.get_model_path(request.model):
+            logger.info(f"Модель {request.model} не загружена. Загружаем...")
+            load_model(request.model)  # ✅ Загружаем модель
+            logger.info(f"Модель {request.model} загружена!")
+
+        logger.info(f"Отправляем запрос в модель: {request.text}")
+
         response = llm_instance(
             request.text,
-            max_tokens=512,
-            temperature=0.7,
-            top_p=0.9,
-            echo=False,
-            stop=["\n", "###"]
+            max_tokens=request.max_tokens,
+            temperature=request.temperature,
+            top_p=request.top_p
         )
+
+        logger.info("Ответ модели получен!")
 
         return {
             "response": response["choices"][0]["text"].strip(),

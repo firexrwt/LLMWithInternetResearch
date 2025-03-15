@@ -15,51 +15,69 @@ function App() {
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const chatEndRef = useRef(null);
 
-  // При загрузке получаем список моделей (с сервера, для управления)
+  // 📌 Загружаем список моделей при загрузке страницы
   useEffect(() => {
     fetchModels();
   }, []);
 
+  // 📌 Скроллим вниз при обновлении чата
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [chatHistory]);
 
+  // 📌 Функция получения списка моделей
   const fetchModels = async () => {
     try {
       const res = await fetch("http://127.0.0.1:9015/api/models");
       const data = await res.json();
-      // Предполагаем, что сервер возвращает поля: name, file_name, installed, а также, возможно, size и parameters (если доступны)
+      console.log("Загруженные модели:", data); // 🔍 Логируем список моделей
+
       setModels(data);
-      // Для выпадающего списка выбираем только установленные модели
       const installed = data.filter((m) => m.installed);
+
       if (installed.length > 0) {
         setSelectedModel(installed[0].name);
+      } else {
+        setSelectedModel(""); // Если нет установленных моделей
       }
     } catch (error) {
       console.error("Ошибка при загрузке моделей:", error);
     }
   };
 
+  // 📌 Функция обработки запроса
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
+
+    console.log("Выбранная модель:", selectedModel); // 🔍 Проверяем, передаётся ли модель
+
+    if (!selectedModel) {
+      console.error("Ошибка: модель не выбрана!");
+      setChatHistory((prev) => [...prev, { role: "assistant", text: "Ошибка: выберите модель!" }]);
+      return;
+    }
+
     setChatHistory([...chatHistory, { role: "user", text: query }]);
     setIsLoading(true);
+
     try {
       const res = await fetch("http://127.0.0.1:9015/api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: query,
-          model: selectedModel,
-          use_internet: useInternet,
+          model: selectedModel, // ✅ Передаём выбранную модель
+          use_internet: useInternet
         }),
       });
+
       if (!res.ok) throw new Error(res.statusText);
       const data = await res.json();
       setChatHistory((prev) => [...prev, { role: "assistant", text: data.response }]);
+
     } catch (error) {
       console.error("Ошибка запроса:", error);
       setChatHistory((prev) => [
@@ -72,6 +90,7 @@ function App() {
     }
   };
 
+  // 📌 Установка модели
   const handleInstallModel = async (modelName) => {
     try {
       const res = await fetch("http://127.0.0.1:9015/api/install_model", {
@@ -86,10 +105,8 @@ function App() {
     }
   };
 
+  // 📌 Удаление модели (пока заглушка)
   const handleDeleteModel = async (modelName) => {
-    // Здесь можно добавить логику удаления модели с локального хранилища,
-    // например, вызов API, который удаляет файл.
-    // Пока покажем заглушку.
     alert(`Удаление модели ${modelName} пока не реализовано.`);
   };
 
@@ -124,9 +141,13 @@ function App() {
       <div className="input-container">
         <select
           value={selectedModel}
-          onChange={(e) => setSelectedModel(e.target.value)}
+          onChange={(e) => {
+            console.log("Выбрана модель:", e.target.value); // 🔍 Проверяем, передаётся ли модель
+            setSelectedModel(e.target.value);
+          }}
           className="model-selector"
         >
+          <option value="">Выберите модель</option>
           {models.filter((m) => m.installed).map((model) => (
             <option key={model.name} value={model.name}>
               {model.name}
