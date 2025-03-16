@@ -70,7 +70,7 @@ def load_model(model_name: str):
 # Запрос в модель
 @router.post("/query")
 async def process_query(request: QueryRequestBody):
-    # Обрабатывает запрос пользователя через LLaMA.
+    # Обрабатывает запрос пользователя и заставляет модель отвечать на том же языке.
     global llm_instance
 
     logger.info(f"Получен запрос: {request}")
@@ -80,22 +80,44 @@ async def process_query(request: QueryRequestBody):
         # Проверяем, загружена ли модель
         if not llm_instance or llm_instance.model_path != model_manager.get_model_path(request.model):
             logger.info(f"Модель {request.model} не загружена. Загружаем...")
-            load_model(request.model)  # ✅ Загружаем модель
+            load_model(request.model)
             logger.info(f"Модель {request.model} загружена!")
 
-        logger.info(f"Отправляем запрос в модель: {request.text}")
+        # Текст запроса пользователя
+        user_text = request.text.strip()
 
+        # Улучшенная инструкция для модели
+        lang_instruction = """You must answer in the same language as the user's question.
+Do not repeat the question. Answer in a complete sentence with useful information."""
+
+        # Новый промпт для модели
+        prompt = f"""You are a helpful AI assistant.
+{lang_instruction}
+
+User: {user_text}
+Assistant:"""
+
+        logger.info(f"Отправляем промпт в модель:\n{prompt}")
+
+        # Отправляем запрос в LLaMA
         response = llm_instance(
-            request.text,
+            prompt,
             max_tokens=request.max_tokens,
             temperature=request.temperature,
-            top_p=request.top_p
+            top_p=request.top_p,
+            echo=False,  # Не повторять вопрос пользователя
+            stop=["\n\n", "User:", "Assistant:"]  # Остановить генерацию при этих токенах
         )
 
-        logger.info("Ответ модели получен!")
+        # Получаем ответ модели
+        model_response = response["choices"][0]["text"].strip()
+        logger.info(f"Ответ модели: {model_response}")
+
+        if not model_response:
+            model_response = "I couldn't generate a response."
 
         return {
-            "response": response["choices"][0]["text"].strip(),
+            "response": model_response,
             "model": request.model,
             "tokens_used": response["usage"]["total_tokens"]
         }
