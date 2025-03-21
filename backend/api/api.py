@@ -61,7 +61,8 @@ def load_model(model_name: str):
     try:
         model_path = model_manager.get_model_path(model_name)
         logger.info(f"Загружаем модель: {model_name}")
-        llm_instance = Llama(model_path=model_path, n_ctx=2048, n_threads=8)
+        #TODO: Реализовать автоопределение железа пользователя
+        llm_instance = Llama(model_path=model_path, n_ctx=2048, n_threads=8, n_gpu_layers=35)
     except Exception as e:
         logger.error(f"Ошибка загрузки модели: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Ошибка загрузки модели: {str(e)}")
