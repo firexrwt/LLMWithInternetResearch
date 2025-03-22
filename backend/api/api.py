@@ -23,11 +23,11 @@ def get_gpu_layers():
     if torch.cuda.is_available():
         logger.info(f"CUDA доступна. Используем устройство: {torch.cuda.get_device_name(0)}")
         gpu_memory = torch.cuda.get_device_properties(0).total_memory // (1024 ** 2)  # Видеопамять в MB
-        if gpu_memory >= 24576:  # Если 24ГБ и больше (например, RTX 3090, 4090)
+        if gpu_memory >= 24000:  # Если 24ГБ и больше (например, RTX 3090, 4090)
             return 60
-        elif gpu_memory >= 12288:  # Если 12ГБ (например, RTX 3060, 4070)
+        elif gpu_memory >= 12000:  # Если 12ГБ (например, RTX 3060, 4070)
             return 35
-        elif gpu_memory >= 8192:  # Если 8ГБ (например, RTX 2060, 3070, 4060)
+        elif gpu_memory >= 8000:  # Если 8ГБ (например, RTX 2060, 3070, 4060)
             return 20
         else:
             return 10  # Если видеопамяти мало, используем меньше слоев на GPU
@@ -81,7 +81,8 @@ def load_model(model_name: str):
         model_path = model_manager.get_model_path(model_name)
         gpu_layers = get_gpu_layers()
         logger.info(f"Загружаем модель: {model_name} с {gpu_layers} слоями на GPU")
-        llm_instance = Llama(model_path=model_path, n_ctx=2048, n_threads=8, n_gpu_layers=gpu_layers)
+        llm_instance = Llama(model_path=model_path, n_ctx=2048, n_threads=8, n_gpu_layers=gpu_layers, use_mmap=True,
+                             use_mlock=True)
     except Exception as e:
         logger.error(f"Ошибка загрузки модели: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Ошибка загрузки модели: {str(e)}")
