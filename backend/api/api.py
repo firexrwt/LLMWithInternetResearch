@@ -21,6 +21,7 @@ llm_instance = None
 # Определяем параметры GPU
 def get_gpu_layers():
     if torch.cuda.is_available():
+        logger.info(f"CUDA доступна. Используем устройство: {torch.cuda.get_device_name(0)}")
         gpu_memory = torch.cuda.get_device_properties(0).total_memory // (1024 ** 2)  # Видеопамять в MB
         if gpu_memory >= 24576:  # Если 24ГБ и больше (например, RTX 3090, 4090)
             return 60
@@ -30,6 +31,7 @@ def get_gpu_layers():
             return 20
         else:
             return 10  # Если видеопамяти мало, используем меньше слоев на GPU
+    logger.error("CUDA не доступна. Будет использован процессор.")
     return 0  # Если GPU нет, работаем только на CPU
 
 

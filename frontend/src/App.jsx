@@ -14,6 +14,9 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const chatEndRef = useRef(null);
+  const [chats, setChats] = useState([{ id: 1, name: "Новый чат", messages: [] }]);
+  const [activeChatId, setActiveChatId] = useState(1);
+
 
   // 📌 Загружаем список моделей при загрузке страницы
   useEffect(() => {
@@ -60,7 +63,14 @@ function App() {
       return;
     }
 
-    setChatHistory([...chatHistory, { role: "user", text: query }]);
+    setChats((prevChats) =>
+      prevChats.map((chat) =>
+        chat.id === activeChatId
+          ? { ...chat, messages: [...chat.messages, { role: "user", text: query }] }
+          : chat
+      )
+    );
+
     setIsLoading(true);
 
     try {
@@ -76,7 +86,14 @@ function App() {
 
       if (!res.ok) throw new Error(res.statusText);
       const data = await res.json();
-      setChatHistory((prev) => [...prev, { role: "assistant", text: data.response }]);
+      setChats((prevChats) =>
+        prevChats.map(chat =>
+          chat.id === activeChatId
+            ? { ...chat, messages: [...chat.messages, { role: "assistant", text: data.response }] }
+            : chat
+        )
+      );
+
 
     } catch (error) {
       console.error("Ошибка запроса:", error);
@@ -89,6 +106,24 @@ function App() {
       setQuery("");
     }
   };
+  const createNewChat = () => {
+    const newChatId = chats.length + 1;
+    const newChat = { id: newChatId, name: `Чат ${newChatId}`, messages: [] };
+    setChats([...chats, newChat]);
+    setActiveChatId(newChatId);
+  };
+  const deleteChat = (id) => {
+    if (chats.length === 1) return;
+      const updatedChats = chats.filter(chat => chat.id !== id);
+      setChats(updatedChats);
+    if (activeChatId === id) {
+      setActiveChatId(updatedChats[0]?.id || 1);
+  }
+  };
+  const setActiveChat = (id) => {
+    setActiveChatId(id);
+  };
+
 
   // 📌 Установка модели
   const handleInstallModel = async (modelName) => {
@@ -113,6 +148,19 @@ function App() {
   return (
     <div className="app-container">
       {/* Заголовок */}
+      <div className="chat-tabs">
+        {chats.map((chat) => (
+          <div
+            key={chat.id}
+            className={`chat-tab ${chat.id === activeChatId ? "active" : ""}`}
+            onClick={() => setActiveChat(chat.id)}
+          >
+            {chat.name}
+            <button onClick={() => deleteChat(chat.id)}>✖</button>
+          </div>
+        ))}
+        <button className="new-chat-button" onClick={createNewChat}>➕</button>
+    </div>
       <header className="header">
         <h1 className="header-title">AI Assistant</h1>
         <button onClick={() => setIsManageModalOpen(true)} className="manage-models-button">
@@ -122,8 +170,8 @@ function App() {
 
       {/* История чата */}
       <div className="chat-container">
-        {chatHistory.length > 0 ? (
-          chatHistory.map((msg, index) => (
+        {chats.find(chat => chat.id === activeChatId)?.messages.length > 0 ? (
+          chats.find(chat => chat.id === activeChatId)?.messages.map((msg, index) => (
             <div
               key={index}
               className={`message ${msg.role === "user" ? "message-user" : "message-assistant"}`}
@@ -134,6 +182,7 @@ function App() {
         ) : (
           <p style={{ textAlign: "center", color: "#777" }}>Нет сообщений</p>
         )}
+
         <div ref={chatEndRef} />
       </div>
 

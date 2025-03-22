@@ -2,7 +2,6 @@
 /backend/__pycache__
 /frontend/node_modules/.bin
 /frontend/node_modules
-/backend/__pycache__
 backend/__pycache__/main.cpython-310.pyc
 <<<<<<< Updated upstream
 /models/
@@ -10,9 +9,6 @@ backend/__pycache__/main.cpython-310.pyc
 *.gguf
 >>>>>>> Stashed changes
 *.pyc
-/backend/__pycache__
 /.idea
-backend/__pycache__/main.cpython-310.pyc
 backend/__pycache__/model_manager.cpython-310.pyc
-*.pyc
-/.idea
+/.vs/

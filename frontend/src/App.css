@@ -159,3 +159,44 @@
 .model-action-button.delete:hover {
   background-color: #c9302c;
 }
+
+.chat-tabs {
+  display: flex;
+  overflow-x: auto;
+  padding: 10px;
+  background: #222;
+  border-bottom: 1px solid #444;
+  white-space: nowrap;
+}
+
+.chat-tab {
+  padding: 8px 16px;
+  margin-right: 5px;
+  background: #333;
+  color: white;
+  border-radius: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.chat-tab.active {
+  background: #007bff;
+}
+
+.chat-tab button {
+  margin-left: 8px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+.new-chat-button {
+  padding: 6px 10px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 15px;
+  cursor: pointer;
+}
