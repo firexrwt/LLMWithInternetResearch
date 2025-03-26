@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import Modal from "react-modal";
-import { FiChevronDown } from "react-icons/fi";
 import "./App.css";
 
 Modal.setAppElement("#root");
 
 function App() {
   const [query, setQuery] = useState("");
-  const [chatHistory, setChatHistory] = useState([]);
   const [models, setModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState("");
   const [useInternet, setUseInternet] = useState(false);
@@ -17,59 +15,53 @@ function App() {
   const [chats, setChats] = useState([{ id: 1, name: "Новый чат", messages: [] }]);
   const [activeChatId, setActiveChatId] = useState(1);
 
-
-  // 📌 Загружаем список моделей при загрузке страницы
   useEffect(() => {
     fetchModels();
   }, []);
 
-  // 📌 Скроллим вниз при обновлении чата
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [chatHistory]);
+  }, [chats.find(chat => chat.id === activeChatId)?.messages]);
 
-  // 📌 Функция получения списка моделей
   const fetchModels = async () => {
     try {
       const res = await fetch("http://127.0.0.1:9015/api/models");
       const data = await res.json();
-      console.log("Загруженные модели:", data); // 🔍 Логируем список моделей
-
       setModels(data);
       const installed = data.filter((m) => m.installed);
 
       if (installed.length > 0) {
         setSelectedModel(installed[0].name);
       } else {
-        setSelectedModel(""); // Если нет установленных моделей
+        setSelectedModel("");
       }
     } catch (error) {
       console.error("Ошибка при загрузке моделей:", error);
     }
   };
 
-  // 📌 Функция обработки запроса
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
 
-    console.log("Выбранная модель:", selectedModel); // 🔍 Проверяем, передаётся ли модель
-
     if (!selectedModel) {
-      console.error("Ошибка: модель не выбрана!");
-      setChatHistory((prev) => [...prev, { role: "assistant", text: "Ошибка: выберите модель!" }]);
+      alert("Выберите модель!");
       return;
     }
 
-    setChats((prevChats) =>
-      prevChats.map((chat) =>
+    setChats((prevChats) => {
+      const updatedChats = prevChats.map((chat) =>
         chat.id === activeChatId
           ? { ...chat, messages: [...chat.messages, { role: "user", text: query }] }
           : chat
-      )
-    );
+      );
+      return [
+        ...updatedChats.filter(chat => chat.id !== activeChatId),
+        updatedChats.find(chat => chat.id === activeChatId)
+      ];
+    });
 
     setIsLoading(true);
 
@@ -79,53 +71,63 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: query,
-          model: selectedModel, // ✅ Передаём выбранную модель
+          model: selectedModel,
           use_internet: useInternet
         }),
       });
 
       if (!res.ok) throw new Error(res.statusText);
       const data = await res.json();
-      setChats((prevChats) =>
-        prevChats.map(chat =>
+
+      setChats((prevChats) => {
+        const updatedChats = prevChats.map(chat =>
           chat.id === activeChatId
             ? { ...chat, messages: [...chat.messages, { role: "assistant", text: data.response }] }
             : chat
-        )
-      );
-
+        );
+        return [
+          ...updatedChats.filter(chat => chat.id !== activeChatId),
+          updatedChats.find(chat => chat.id === activeChatId)
+        ];
+      });
 
     } catch (error) {
       console.error("Ошибка запроса:", error);
-      setChatHistory((prev) => [
-        ...prev,
-        { role: "assistant", text: `Ошибка: ${error.message}` },
-      ]);
+      setChats((prevChats) => {
+        const updatedChats = prevChats.map(chat =>
+          chat.id === activeChatId
+            ? { ...chat, messages: [...chat.messages, { role: "assistant", text: `Ошибка: ${error.message}` }] }
+            : chat
+        );
+        return [
+          ...updatedChats.filter(chat => chat.id !== activeChatId),
+          updatedChats.find(chat => chat.id === activeChatId)
+        ];
+      });
     } finally {
       setIsLoading(false);
       setQuery("");
     }
   };
+
   const createNewChat = () => {
-    const newChatId = chats.length + 1;
-    const newChat = { id: newChatId, name: `Чат ${newChatId}`, messages: [] };
-    setChats([...chats, newChat]);
+    const newChatId = Date.now();
+    const newChat = { id: newChatId, name: `Новый чат`, messages: [] };
+    setChats([newChat, ...chats]);
     setActiveChatId(newChatId);
   };
+
   const deleteChat = (id) => {
     if (chats.length === 1) return;
-      const updatedChats = chats.filter(chat => chat.id !== id);
-      setChats(updatedChats);
-    if (activeChatId === id) {
-      setActiveChatId(updatedChats[0]?.id || 1);
-  }
+    const updatedChats = chats.filter(chat => chat.id !== id);
+    setChats(updatedChats);
+    setActiveChatId(updatedChats[0]?.id || 1);
   };
+
   const setActiveChat = (id) => {
     setActiveChatId(id);
   };
 
-
-  // 📌 Установка модели
   const handleInstallModel = async (modelName) => {
     try {
       const res = await fetch("http://127.0.0.1:9015/api/install_model", {
@@ -140,83 +142,105 @@ function App() {
     }
   };
 
-  // 📌 Удаление модели (пока заглушка)
   const handleDeleteModel = async (modelName) => {
     alert(`Удаление модели ${modelName} пока не реализовано.`);
   };
 
   return (
     <div className="app-container">
-      {/* Заголовок */}
-      <div className="chat-tabs">
-        {chats.map((chat) => (
-          <div
-            key={chat.id}
-            className={`chat-tab ${chat.id === activeChatId ? "active" : ""}`}
-            onClick={() => setActiveChat(chat.id)}
-          >
-            {chat.name}
-            <button onClick={() => deleteChat(chat.id)}>✖</button>
-          </div>
-        ))}
-        <button className="new-chat-button" onClick={createNewChat}>➕</button>
-    </div>
-      <header className="header">
-        <h1 className="header-title">AI Assistant</h1>
-        <button onClick={() => setIsManageModalOpen(true)} className="manage-models-button">
-          Управление моделями
-        </button>
-      </header>
-
-      {/* История чата */}
-      <div className="chat-container">
-        {chats.find(chat => chat.id === activeChatId)?.messages.length > 0 ? (
-          chats.find(chat => chat.id === activeChatId)?.messages.map((msg, index) => (
+      <div className="sidebar">
+        <div className="sidebar-header">
+          <button className="new-chat-button" onClick={createNewChat}>
+            + Новый чат
+          </button>
+        </div>
+        <div className="chat-list">
+          {chats.map((chat) => (
             <div
-              key={index}
-              className={`message ${msg.role === "user" ? "message-user" : "message-assistant"}`}
+              key={chat.id}
+              className={`chat-tab ${chat.id === activeChatId ? "active" : ""}`}
+              onClick={() => setActiveChat(chat.id)}
             >
-              {msg.text}
+              <span>{chat.name}</span>
+              {chats.length > 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteChat(chat.id);
+                  }}
+                >
+                  ✖
+                </button>
+              )}
             </div>
-          ))
-        ) : (
-          <p style={{ textAlign: "center", color: "#777" }}>Нет сообщений</p>
-        )}
-
-        <div ref={chatEndRef} />
-      </div>
-
-      {/* Поле ввода с выпадающим списком установленных моделей */}
-      <div className="input-container">
-        <select
-          value={selectedModel}
-          onChange={(e) => {
-            console.log("Выбрана модель:", e.target.value); // 🔍 Проверяем, передаётся ли модель
-            setSelectedModel(e.target.value);
-          }}
-          className="model-selector"
-        >
-          <option value="">Выберите модель</option>
-          {models.filter((m) => m.installed).map((model) => (
-            <option key={model.name} value={model.name}>
-              {model.name}
-            </option>
           ))}
-        </select>
-        <textarea
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Введите запрос..."
-          className="input-field"
-          rows="2"
-          disabled={isLoading}
-        />
-        <button type="submit" onClick={handleSubmit} disabled={isLoading} className="send-button">
-          {isLoading ? "..." : "Отправить"}
-        </button>
+        </div>
+        <div className="sidebar-footer">
+          <button
+            onClick={() => setIsManageModalOpen(true)}
+            className="manage-models-button"
+          >
+            Управление моделями
+          </button>
+        </div>
       </div>
 
-      {/* Модальное окно управления моделями */}
+      <div className="main-content">
+        <header className="header">
+          <h1 className="header-title">AI Assistant</h1>
+        </header>
+
+        <div className="chat-container">
+          {chats.find(chat => chat.id === activeChatId)?.messages.length > 0 ? (
+            chats.find(chat => chat.id === activeChatId)?.messages.map((msg, index) => (
+              <div
+                key={index}
+                className={`message ${msg.role === "user" ? "message-user" : "message-assistant"}`}
+              >
+                {msg.text}
+              </div>
+            ))
+          ) : (
+            <p style={{ textAlign: "center", color: "#777" }}>Нет сообщений</p>
+          )}
+
+          <div ref={chatEndRef} />
+        </div>
+
+        <div className="input-container">
+          <div className="input-field-wrapper">
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              className="model-selector"
+            >
+              <option value="">Выберите модель</option>
+              {models.filter((m) => m.installed).map((model) => (
+                <option key={model.name} value={model.name}>
+                  {model.name}
+                </option>
+              ))}
+            </select>
+            <textarea
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Введите запрос..."
+              className="input-field"
+              rows="2"
+              disabled={isLoading}
+            />
+            <button
+              type="submit"
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="send-button"
+            >
+              {isLoading ? "..." : "Отправить"}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <Modal
         isOpen={isManageModalOpen}
         onRequestClose={() => setIsManageModalOpen(false)}
@@ -224,35 +248,39 @@ function App() {
         overlayClassName="modal-overlay"
       >
         <h2>Доступные модели</h2>
-        <div className="modal-content">
-          {models.length > 0 ? (
-            <ul className="model-list">
-              {models.map((model) => (
-                <li key={model.name} className="model-item">
-                  <div className="model-info">
-                    <strong>{model.name}</strong>
-                    <div className="model-details">
-                      <span>Размер: {model.size || "Неизвестно"}</span>
-                      <span>Параметры: {model.parameters || "Неизвестно"}</span>
-                    </div>
-                  </div>
-                  {model.installed ? (
-                    <button onClick={() => handleDeleteModel(model.name)} className="model-action-button delete">
-                      Удалить
-                    </button>
-                  ) : (
-                    <button onClick={() => handleInstallModel(model.name)} className="model-action-button install">
-                      Установить
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>Модели загружаются...</p>
-          )}
-        </div>
-        <button onClick={() => setIsManageModalOpen(false)} className="manage-models-button">
+        <ul className="model-list">
+          {models.map((model) => (
+            <li key={model.name} className="model-item">
+              <div>
+                <strong>{model.name}</strong>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                  Размер: {model.size || "Неизвестно"} |
+                  Параметры: {model.parameters || "Неизвестно"}
+                </div>
+              </div>
+              {model.installed ? (
+                <button
+                  onClick={() => handleDeleteModel(model.name)}
+                  className="model-action-button delete"
+                >
+                  Удалить
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleInstallModel(model.name)}
+                  className="model-action-button install"
+                >
+                  Установить
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+        <button
+          onClick={() => setIsManageModalOpen(false)}
+          className="manage-models-button"
+          style={{ marginTop: '16px' }}
+        >
           Закрыть
         </button>
       </Modal>
