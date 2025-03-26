@@ -327,6 +327,13 @@ body {
 }
 
 /* Новые стили для настроек модели */
+.modal-header {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .model-settings-inputs {
   display: flex;
   flex-direction: column;
