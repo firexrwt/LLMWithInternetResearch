@@ -195,6 +195,7 @@ body {
   outline: none;
   border-color: var(--accent-color);
   box-shadow: 0 0 0 2px rgba(93, 108, 211, 0.2);
+  
 }
 
 .input-field:disabled {
@@ -227,15 +228,49 @@ body {
 
 .modal {
   position: absolute;
+  display: flex;
+  flex-direction: column;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   background-color: var(--bg-element);
-  padding: 30px;
+  padding: 10px;
+  padding-top: 0%;
   border-radius: var(--border-radius);
   width: 500px;
-  max-height: 80vh;
+  height: 80vh;
   overflow-y: auto;
+}
+
+.tab-container {
+  position: sticky;
+  top: 0;
+  display: flex;
+  background-color: #242836;
+  padding-top: 1%;
+}
+
+.tab-button {
+  flex: 1; /* Равномерное распределение вкладок */
+  padding: 12px 20px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 0.93rem;
+  font-weight: bold;
+  color: #bbb;
+  text-align: center;
+  transition: all 0.3s;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-button:hover {
+  color: #fff;
+}
+
+.tab-button.active {
+  color: #fff;
+  border-bottom: 2px solid #6a5acd; /* Фиолетовый акцент */
 }
 
 .modal-overlay {

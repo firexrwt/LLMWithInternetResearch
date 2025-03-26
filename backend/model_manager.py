@@ -18,26 +18,42 @@ class ModelManager:
 
     def get_available_models(self) -> List[Dict]:
         current_time = time.time()
+        
+        # Загружаем модели из кеша, если он свежий
         if self.cache["models"] and (current_time - self.cache["last_update"] < self.CACHE_TIME):
-            return self.cache["models"]  # Если кеш свежий, возвращаем его
+            return self.cache["models"]
 
+        # Собираем список локальных моделей
+        local_models = []
+        for file in os.listdir(self.MODELS_DIR):
+            if file.endswith(".gguf"):
+                local_models.append({
+                    "name": file,  
+                    "repo_id": None,  # Нет репозитория, т.к. это локальный файл
+                    "file_name": file
+                })
+
+        # Добавляем модели из Hugging Face
         try:
-            models = self.api.list_models(filter="gguf", limit=20)  # Запрашиваем ТОЛЬКО GGUF модели
-            available_models = [
+            hf_models = self.api.list_models(filter="gguf", limit=20)
+            hf_models_list = [
                 {
                     "name": model.id,
                     "repo_id": model.id,
                     "file_name": self.get_gguf_filename(model.id),
                 }
-                for model in models
+                for model in hf_models
             ]
-
-            self.cache["models"] = available_models
-            self.cache["last_update"] = current_time  # Обновляем кеш
-            return available_models
         except Exception as e:
-            print(f"Ошибка при получении моделей: {e}")
-            return []
+            print(f"Ошибка при получении моделей из Hugging Face: {e}")
+            hf_models_list = []
+
+        # Объединяем локальные и HF-модели
+        all_models = local_models + hf_models_list
+        self.cache["models"] = all_models
+        self.cache["last_update"] = current_time
+        
+        return all_models
 
     def get_gguf_filename(self, repo_id: str) -> str:
         try:

@@ -14,6 +14,8 @@ function App() {
   const chatEndRef = useRef(null);
   const [chats, setChats] = useState([{ id: 1, name: "Новый чат", messages: [] }]);
   const [activeChatId, setActiveChatId] = useState(1);
+  const [sendButton, setSendButton] = useState("⌯⌲")
+  const [activeTab, setActiveTab] = useState("installed_models");
 
   useEffect(() => {
     fetchModels();
@@ -41,6 +43,10 @@ function App() {
       console.error("Ошибка при загрузке моделей:", error);
     }
   };
+
+  const handleEasterEgg = async (e) => {
+    setSendButton("⌯⌲ ▐▐")
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -107,6 +113,77 @@ function App() {
     } finally {
       setIsLoading(false);
       setQuery("");
+    }
+  };
+
+
+  const handleSubmitOnKey = async (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!query.trim()) return;
+
+      if (!selectedModel) {
+        alert("Выберите модель!");
+        return;
+      }
+
+      setChats((prevChats) => {
+        const updatedChats = prevChats.map((chat) =>
+          chat.id === activeChatId
+            ? { ...chat, messages: [...chat.messages, { role: "user", text: query }] }
+            : chat
+        );
+        return [
+          ...updatedChats.filter(chat => chat.id !== activeChatId),
+          updatedChats.find(chat => chat.id === activeChatId)
+        ];
+      });
+
+      setIsLoading(true);
+
+      try {
+        const res = await fetch("http://127.0.0.1:9015/api/query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: query,
+            model: selectedModel,
+            use_internet: useInternet
+          }),
+        });
+
+        if (!res.ok) throw new Error(res.statusText);
+        const data = await res.json();
+
+        setChats((prevChats) => {
+          const updatedChats = prevChats.map(chat =>
+            chat.id === activeChatId
+              ? { ...chat, messages: [...chat.messages, { role: "assistant", text: data.response }] }
+              : chat
+          );
+          return [
+            ...updatedChats.filter(chat => chat.id !== activeChatId),
+            updatedChats.find(chat => chat.id === activeChatId)
+          ];
+        });
+
+      } catch (error) {
+        console.error("Ошибка запроса:", error);
+        setChats((prevChats) => {
+          const updatedChats = prevChats.map(chat =>
+            chat.id === activeChatId
+              ? { ...chat, messages: [...chat.messages, { role: "assistant", text: `Ошибка: ${error.message}` }] }
+              : chat
+          );
+          return [
+            ...updatedChats.filter(chat => chat.id !== activeChatId),
+            updatedChats.find(chat => chat.id === activeChatId)
+          ];
+        });
+      } finally {
+        setIsLoading(false);
+        setQuery("");
+      }
     }
   };
 
@@ -227,27 +304,45 @@ function App() {
               placeholder="Введите запрос..."
               className="input-field"
               rows="2"
+              onKeyDown={handleSubmitOnKey}
               disabled={isLoading}
             />
             <button
               type="submit"
               onClick={handleSubmit}
+              onDoubleClick={handleEasterEgg}
               disabled={isLoading}
               className="send-button"
             >
-              {isLoading ? "..." : "Отправить"}
+              {isLoading ? "..." : sendButton}
             </button>
           </div>
         </div>
       </div>
-
+      
+      
       <Modal
         isOpen={isManageModalOpen}
         onRequestClose={() => setIsManageModalOpen(false)}
         className="modal"
         overlayClassName="modal-overlay"
       >
-        <h2>Доступные модели</h2>
+        {/* <button
+        onClick={() => setIsManageModalOpen(false)}
+        className="modal-close-button"
+        >
+          Закрыть
+        </button> */}
+
+      <div className="tab-container">
+        <button className={`tab-button ${activeTab === "available_models" ? "active" : ""}`} onClick={() => setActiveTab("available_models")}>
+          Доступные модели
+        </button>
+        <button className={`tab-button ${activeTab === "installed_models" ? "active" : ""}`} onClick={() => setActiveTab("installed_models")}>
+          Установленные модели
+        </button>
+      </div>
+      {activeTab === "available_models" && (
         <ul className="model-list">
           {models.map((model) => (
             <li key={model.name} className="model-item">
@@ -275,14 +370,38 @@ function App() {
               )}
             </li>
           ))}
-        </ul>
-        <button
-          onClick={() => setIsManageModalOpen(false)}
-          className="manage-models-button"
-          style={{ marginTop: '16px' }}
-        >
-          Закрыть
-        </button>
+        </ul>)}
+
+        {activeTab === "installed_models" && (
+          <ul className="model-list">
+            {models.filter((m) => m.installed).map((model) => (
+              <li key={model.name} className="model-item">
+                <div>
+                  <strong>{model.name}</strong>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                    Размер: {model.size || "Неизвестно"} |
+                    Параметры: {model.parameters || "Неизвестно"}
+                  </div>
+                </div>
+                {model.installed ? (
+                  <button
+                    onClick={() => handleDeleteModel(model.name)}
+                    className="model-action-button delete"
+                  >
+                    Удалить
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleInstallModel(model.name)}
+                    className="model-action-button install"
+                  >
+                    Установить
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>)}
+
       </Modal>
     </div>
   );

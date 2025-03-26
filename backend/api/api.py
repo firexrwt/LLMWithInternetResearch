@@ -49,15 +49,31 @@ class QueryRequestBody(BaseModel):
     top_p: float = 0.9
 
 
-# Получение списка доступных моделей
 @router.get("/models")
 async def list_available_models():
     try:
-        models = model_manager.get_available_models()
-        for model in models:
-            local_path = os.path.join(model_manager.MODELS_DIR, model["file_name"])
-            model["installed"] = os.path.exists(local_path)
-        return models
+        # Получаем список локально установленных моделей
+        local_models = {}
+        if os.path.exists(model_manager.MODELS_DIR):
+            for file_name in os.listdir(model_manager.MODELS_DIR):
+                if file_name.endswith(".gguf") or file_name.endswith(".bin"):
+                    local_models[file_name] = {"name": file_name, "installed": True}
+
+        # Получаем список доступных моделей с Hugging Face
+        models_from_hf = model_manager.get_available_models()
+
+        # Проверяем, какие модели из HF уже установлены
+        for model in models_from_hf:
+            file_name = model["file_name"]
+            if file_name in local_models:
+                model["installed"] = True
+                del local_models[file_name]  # Удаляем из локального списка, чтобы не дублировать
+
+        # Объединяем оба списка
+        all_models = models_from_hf + list(local_models.values())
+
+        return all_models
+
     except Exception as e:
         logger.error(f"Ошибка при получении списка моделей: {str(e)}")
         raise HTTPException(status_code=500, detail="Ошибка при получении моделей.")
