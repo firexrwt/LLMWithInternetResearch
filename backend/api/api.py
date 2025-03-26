@@ -2,7 +2,7 @@ import os
 import logging
 import torch
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from backend.model_manager import ModelManager
 from llama_cpp import Llama
 
@@ -16,6 +16,13 @@ router = APIRouter()
 # Менеджер моделей и глобальная переменная для текущей модели
 model_manager = ModelManager()
 llm_instance = None
+
+# Глобальные настройки модели по умолчанию
+global_model_settings = {
+    "max_tokens": 512,
+    "temperature": 0.7,
+    "top_p": 0.9
+}
 
 
 # Определяем параметры GPU
@@ -40,13 +47,30 @@ class ModelRequestBody(BaseModel):
     model: str  # Название модели для загрузки
 
 
-class QueryRequestBody(BaseModel):
+class ModelSettingsRequestBody(BaseModel):
+    max_tokens: int = Field(default=512, ge=1, le=4096, description="Максимальное количество токенов для генерации")
+    temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="Температура сэмплирования")
+    top_p: float = Field(default=0.9, ge=0.0, le=1.0, description="Порог вероятности для nucleus сэмплинга")
+
+
+class QueryRequestBody(ModelSettingsRequestBody):
     text: str  # Текст запроса
     model: str  # Выбранная модель
     use_internet: bool = False  # Использовать ли веб-поиск (пока заглушка)
-    max_tokens: int = 512
-    temperature: float = 0.7
-    top_p: float = 0.9
+
+
+# Переключение на другую модель
+def load_model(model_name: str):
+    global llm_instance
+    try:
+        model_path = model_manager.get_model_path(model_name)
+        gpu_layers = get_gpu_layers()
+        logger.info(f"Загружаем модель: {model_name} с {gpu_layers} слоями на GPU")
+        llm_instance = Llama(model_path=model_path, n_ctx=2048, n_threads=8, n_gpu_layers=gpu_layers, use_mmap=True,
+                             use_mlock=True)
+    except Exception as e:
+        logger.error(f"Ошибка загрузки модели: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ошибка загрузки модели: {str(e)}")
 
 
 @router.get("/models")
@@ -79,7 +103,6 @@ async def list_available_models():
         raise HTTPException(status_code=500, detail="Ошибка при получении моделей.")
 
 
-# Установка модели (скачивание)
 @router.post("/install_model")
 async def install_model(request: ModelRequestBody):
     try:
@@ -90,24 +113,34 @@ async def install_model(request: ModelRequestBody):
         raise HTTPException(status_code=500, detail=f"Ошибка установки модели: {str(e)}")
 
 
-# Переключение на другую модель
-def load_model(model_name: str):
-    global llm_instance
+@router.post("/update_model_settings")
+async def update_model_settings(request: ModelSettingsRequestBody):
+    """
+    Обновление глобальных настроек модели
+
+    :param request: ModelSettingsRequestBody с настраиваемыми параметрами
+    :return: Подтверждение обновления настроек
+    """
+    global global_model_settings
     try:
-        model_path = model_manager.get_model_path(model_name)
-        gpu_layers = get_gpu_layers()
-        logger.info(f"Загружаем модель: {model_name} с {gpu_layers} слоями на GPU")
-        llm_instance = Llama(model_path=model_path, n_ctx=2048, n_threads=8, n_gpu_layers=gpu_layers, use_mmap=True,
-                             use_mlock=True)
+        global_model_settings.update({
+            "max_tokens": request.max_tokens,
+            "temperature": request.temperature,
+            "top_p": request.top_p
+        })
+        logger.info(f"Обновлены настройки модели: {global_model_settings}")
+        return {
+            "message": "Настройки модели обновлены",
+            "settings": global_model_settings
+        }
     except Exception as e:
-        logger.error(f"Ошибка загрузки модели: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Ошибка загрузки модели: {str(e)}")
+        logger.error(f"Ошибка обновления настроек: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ошибка обновления настроек: {str(e)}")
 
 
-# Запрос в модель
 @router.post("/query")
 async def process_query(request: QueryRequestBody):
-    global llm_instance
+    global llm_instance, global_model_settings
 
     logger.info(f"Получен запрос: {request}")
     logger.info(f"Выбранная модель: {request.model}")
@@ -117,6 +150,11 @@ async def process_query(request: QueryRequestBody):
             logger.info(f"Модель {request.model} не загружена. Загружаем...")
             load_model(request.model)
             logger.info(f"Модель {request.model} загружена!")
+
+        # Используем параметры из запроса или глобальные настройки по умолчанию
+        max_tokens = request.max_tokens or global_model_settings["max_tokens"]
+        temperature = request.temperature or global_model_settings["temperature"]
+        top_p = request.top_p or global_model_settings["top_p"]
 
         user_text = request.text.strip()
         lang_instruction = """You must answer in the same language as the user's question.
@@ -131,9 +169,9 @@ async def process_query(request: QueryRequestBody):
 
         response = llm_instance(
             prompt,
-            max_tokens=request.max_tokens,
-            temperature=request.temperature,
-            top_p=request.top_p,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=top_p,
             echo=False,
             stop=["\n\n", "User:", "Assistant:"]
         )
@@ -147,7 +185,12 @@ async def process_query(request: QueryRequestBody):
         return {
             "response": model_response,
             "model": request.model,
-            "tokens_used": response["usage"]["total_tokens"]
+            "tokens_used": response["usage"]["total_tokens"],
+            "settings_used": {
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "top_p": top_p
+            }
         }
 
     except Exception as e:

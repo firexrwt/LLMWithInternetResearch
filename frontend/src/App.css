@@ -195,7 +195,6 @@ body {
   outline: none;
   border-color: var(--accent-color);
   box-shadow: 0 0 0 2px rgba(93, 108, 211, 0.2);
-  
 }
 
 .input-field:disabled {
@@ -251,7 +250,7 @@ body {
 }
 
 .tab-button {
-  flex: 1; /* Равномерное распределение вкладок */
+  flex: 1;
   padding: 12px 20px;
   cursor: pointer;
   background: none;
@@ -270,7 +269,7 @@ body {
 
 .tab-button.active {
   color: #fff;
-  border-bottom: 2px solid #6a5acd; /* Фиолетовый акцент */
+  border-bottom: 2px solid #6a5acd;
 }
 
 .modal-overlay {
@@ -325,4 +324,37 @@ body {
   border-radius: var(--border-radius);
   cursor: pointer;
   font-weight: 600;
+}
+
+/* Новые стили для настроек модели */
+.model-settings-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px;
+}
+
+.model-settings-input {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.model-settings-input label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.model-settings-input input[type="range"] {
+  width: 200px;
+  accent-color: var(--accent-color);
+}
+
+.model-settings-input input[type="number"] {
+  width: 80px;
+  background-color: var(--bg-dark-light);
+  color: var(--text-primary);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 5px;
 }
