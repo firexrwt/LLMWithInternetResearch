@@ -234,7 +234,7 @@ function App() {
 
       <div className="main-content">
         <header className="header">
-          <h1 className="header-title">AI Assistant</h1>
+          <h1 className="header-title">NeuraBox</h1>
         </header>
 
         <div className="chat-container">
