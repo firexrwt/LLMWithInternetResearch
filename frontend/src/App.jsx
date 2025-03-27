@@ -101,6 +101,7 @@ function App() {
           text: query,
           model: selectedModel,
           use_internet: useInternet,
+          chat_id: activeChatId.toString(), // Передаем идентификатор чата
           ...modelSettings
         }),
       });

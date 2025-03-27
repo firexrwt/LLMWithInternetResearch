@@ -5,6 +5,9 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from backend.model_manager import ModelManager
 from llama_cpp import Llama
+from collections import deque
+from typing import Dict, Optional
+import uuid
 
 # Настраиваем логирование
 logging.basicConfig(level=logging.INFO)
@@ -16,6 +19,7 @@ router = APIRouter()
 # Менеджер моделей и глобальная переменная для текущей модели
 model_manager = ModelManager()
 llm_instance = None
+conversation_histories: Dict[str, deque] = {}  # Словарь для хранения истории каждого чата
 
 # Глобальные настройки модели по умолчанию
 global_model_settings = {
@@ -56,6 +60,7 @@ class ModelSettingsRequestBody(BaseModel):
 class QueryRequestBody(ModelSettingsRequestBody):
     text: str  # Текст запроса
     model: str  # Выбранная модель
+    chat_id: Optional[str] = Field(default=None, description="Уникальный идентификатор чата")
     use_internet: bool = False  # Использовать ли веб-поиск (пока заглушка)
 
 
@@ -135,15 +140,18 @@ async def update_model_settings(request: ModelSettingsRequestBody):
         }
     except Exception as e:
         logger.error(f"Ошибка обновления настроек: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Ошибка обновления настроек: {str(e)}")
+        raise HTTPException(status_code=500, detail="Ошибка обновления настроек.")
 
 
 @router.post("/query")
 async def process_query(request: QueryRequestBody):
-    global llm_instance, global_model_settings
+    global llm_instance, global_model_settings, conversation_histories
 
     logger.info(f"Получен запрос: {request}")
+    logger.info(f"Данные запроса: {request.dict()}")
     logger.info(f"Выбранная модель: {request.model}")
+
+    chat_id = request.chat_id  # Получаем ID чата из запроса
 
     try:
         if not llm_instance or llm_instance.model_path != model_manager.get_model_path(request.model):
@@ -151,19 +159,41 @@ async def process_query(request: QueryRequestBody):
             load_model(request.model)
             logger.info(f"Модель {request.model} загружена!")
 
-        # Используем параметры из запроса или глобальные настройки по умолчанию
         max_tokens = request.max_tokens or global_model_settings["max_tokens"]
         temperature = request.temperature or global_model_settings["temperature"]
         top_p = request.top_p or global_model_settings["top_p"]
 
         user_text = request.text.strip()
-        lang_instruction = """You must answer in the same language as the user's question.
-        Do not repeat the question. Answer in a complete sentence with useful information."""
-        prompt = f"""You are a helpful AI assistant.
-        {lang_instruction}
 
-        User: {user_text}
-        Assistant:"""
+        # Получаем историю для конкретного чата или создаем новую, если ее нет
+        if chat_id is None:
+            logger.info("chat_id не предоставлен клиентом, генерируем новый")
+            chat_id = str(uuid.uuid4())  # Генерируем новый chat_id, если он не предоставлен
+
+        if chat_id not in conversation_histories:
+            logger.info(f"История для chat_id: {chat_id} не найдена, создаем новую")
+            conversation_history = deque(maxlen=20)  # Создаем новую историю
+            conversation_histories[chat_id] = conversation_history  # Сохраняем новую историю
+        else:
+            logger.info(f"История для chat_id: {chat_id} найдена")
+            conversation_history = conversation_histories[chat_id]  # Получаем существующую историю
+
+        # Добавляем текущее сообщение в историю
+        conversation_history.append(f"User: {user_text}")
+        conversation_histories[chat_id] = conversation_history  # Обновляем историю в словаре
+
+        # Формируем полный контекст для модели
+        history_text = "\n".join(conversation_history)
+        prompt = f"""
+                You are a helpful AI assistant.
+                Keep the conversation context.
+                You must answer in the same language as the user's question.
+                Do not repeat the question. Answer in a complete sentence with useful information.
+                
+                Conversation context:
+                {history_text}
+
+                Assistant:"""
 
         logger.info(f"Отправляем промпт в модель:\n{prompt}")
 
@@ -178,6 +208,10 @@ async def process_query(request: QueryRequestBody):
 
         model_response = response["choices"][0]["text"].strip()
         logger.info(f"Ответ модели: {model_response}")
+
+        # Добавляем ответ модели в историю
+        conversation_history.append(f"Assistant: {model_response}")
+        conversation_histories[chat_id] = conversation_history  # Обновляем историю в словаре
 
         if not model_response:
             model_response = "I couldn't generate a response."
