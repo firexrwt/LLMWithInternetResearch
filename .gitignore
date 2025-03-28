@@ -12,3 +12,4 @@ backend/__pycache__/main.cpython-310.pyc
 /.idea
 backend/__pycache__/model_manager.cpython-310.pyc
 /.vs/
+.env

@@ -326,7 +326,7 @@ body {
   font-weight: 600;
 }
 
-/* Новые стили для настроек модели */
+/* Стили для настроек модели */
 .modal-header {
   padding: 20px;
   display: flex;
@@ -334,7 +334,7 @@ body {
   gap: 20px;
 }
 
-.model-settings-inputs {
+.model-settings {
   display: flex;
   flex-direction: column;
   gap: 15px;
@@ -352,11 +352,6 @@ body {
   font-size: 0.9rem;
 }
 
-.model-settings-input input[type="range"] {
-  width: 200px;
-  accent-color: var(--accent-color);
-}
-
 .model-settings-input input[type="number"] {
   width: 80px;
   background-color: var(--bg-dark-light);
@@ -364,4 +359,81 @@ body {
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 10px;
   padding: 5px;
+}
+
+/* Стили для токена */
+.token-container {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+}
+
+.token-input {
+  flex: 1;
+  background-color: var(--bg-dark-light);
+  color: var(--text-primary);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+
+.token-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.token-save-button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 15px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.token-save-button:hover {
+  background-color: var(--accent-hover);
+}
+
+.token-create-button {
+  background-color: rgba(255,255,255,0.1);
+  color: var(--text-primary);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  padding: 8px 15px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.token-create-button:hover {
+  background-color: rgba(255,255,255,0.2);
+}
+
+/* Стили для сортировки */
+.sort-container {
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sort-container label {
+  color: var(--text-secondary);
+}
+
+.sort-container select {
+  background-color: var(--bg-dark-light);
+  color: var(--text-primary);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.sort-container select:focus {
+  outline: none;
+  border-color: var(--accent-color);
 }

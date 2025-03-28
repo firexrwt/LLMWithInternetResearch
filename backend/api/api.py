@@ -1,70 +1,74 @@
 import os
 import logging
 import torch
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from backend.model_manager import ModelManager
 from llama_cpp import Llama
 from collections import deque
 from typing import Dict, Optional
 import uuid
+from dotenv import load_dotenv
 
-# Настраиваем логирование
+# Указываем путь к .env относительно api.py
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+ENV_PATH = os.path.join(BASE_DIR, ".env")
+load_dotenv(dotenv_path=ENV_PATH)
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Создаём API-роутер
 router = APIRouter()
 
-# Менеджер моделей и глобальная переменная для текущей модели
-model_manager = ModelManager()
-llm_instance = None
-conversation_histories: Dict[str, deque] = {}  # Словарь для хранения истории каждого чата
+HF_TOKEN = os.getenv("HF_TOKEN")
+if not HF_TOKEN:
+    logger.warning("HF_TOKEN не задан в .env или окружении.")
 
-# Глобальные настройки модели по умолчанию
+model_manager = None  # Инициализируем позже с учетом токена из запроса
+llm_instance = None
+conversation_histories: Dict[str, deque] = {}
+
 global_model_settings = {
     "max_tokens": 512,
     "temperature": 0.7,
     "top_p": 0.9
 }
 
+class TokenRequestBody(BaseModel):
+    token: str
 
-# Определяем параметры GPU
 def get_gpu_layers():
     if torch.cuda.is_available():
         logger.info(f"CUDA доступна. Используем устройство: {torch.cuda.get_device_name(0)}")
-        gpu_memory = torch.cuda.get_device_properties(0).total_memory // (1024 ** 2)  # Видеопамять в MB
-        if gpu_memory >= 24000:  # Если 24ГБ и больше (например, RTX 3090, 4090)
+        gpu_memory = torch.cuda.get_device_properties(0).total_memory // (1024 ** 2)
+        if gpu_memory >= 24000:
             return 60
-        elif gpu_memory >= 12000:  # Если 12ГБ (например, RTX 3060, 4070)
+        elif gpu_memory >= 12000:
             return 35
-        elif gpu_memory >= 8000:  # Если 8ГБ (например, RTX 2060, 3070, 4060)
+        elif gpu_memory >= 8000:
             return 20
         else:
-            return 10  # Если видеопамяти мало, используем меньше слоев на GPU
+            return 10
     logger.error("CUDA не доступна. Будет использован процессор.")
-    return 0  # Если GPU нет, работаем только на CPU
+    return 0
 
-
-# Классы для валидации запросов
 class ModelRequestBody(BaseModel):
-    model: str  # Название модели для загрузки
+    model: str
 
 
 class ModelSettingsRequestBody(BaseModel):
-    max_tokens: int = Field(default=512, ge=1, le=4096, description="Максимальное количество токенов для генерации")
-    temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="Температура сэмплирования")
-    top_p: float = Field(default=0.9, ge=0.0, le=1.0, description="Порог вероятности для nucleus сэмплинга")
+    max_tokens: int = Field(default=512, ge=1, le=4096)
+    temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+    top_p: float = Field(default=0.9, ge=0.0, le=1.0)
 
 
 class QueryRequestBody(ModelSettingsRequestBody):
-    text: str  # Текст запроса
-    model: str  # Выбранная модель
-    chat_id: Optional[str] = Field(default=None, description="Уникальный идентификатор чата")
-    use_internet: bool = False  # Использовать ли веб-поиск (пока заглушка)
+    text: str
+    model: str
+    chat_id: Optional[str] = Field(default=None)
+    use_internet: bool = False
 
 
-# Переключение на другую модель
 def load_model(model_name: str):
     global llm_instance
     try:
@@ -79,30 +83,12 @@ def load_model(model_name: str):
 
 
 @router.get("/models")
-async def list_available_models():
+async def list_available_models(request: Request):
+    global model_manager
+    hf_token = request.headers.get("X-HF-Token", HF_TOKEN)
+    model_manager = ModelManager(hf_token=hf_token)
     try:
-        # Получаем список локально установленных моделей
-        local_models = {}
-        if os.path.exists(model_manager.MODELS_DIR):
-            for file_name in os.listdir(model_manager.MODELS_DIR):
-                if file_name.endswith(".gguf") or file_name.endswith(".bin"):
-                    local_models[file_name] = {"name": file_name, "installed": True}
-
-        # Получаем список доступных моделей с Hugging Face
-        models_from_hf = model_manager.get_available_models()
-
-        # Проверяем, какие модели из HF уже установлены
-        for model in models_from_hf:
-            file_name = model["file_name"]
-            if file_name in local_models:
-                model["installed"] = True
-                del local_models[file_name]  # Удаляем из локального списка, чтобы не дублировать
-
-        # Объединяем оба списка
-        all_models = models_from_hf + list(local_models.values())
-
-        return all_models
-
+        return model_manager.get_available_models()
     except Exception as e:
         logger.error(f"Ошибка при получении списка моделей: {str(e)}")
         raise HTTPException(status_code=500, detail="Ошибка при получении моделей.")
@@ -120,12 +106,6 @@ async def install_model(request: ModelRequestBody):
 
 @router.post("/update_model_settings")
 async def update_model_settings(request: ModelSettingsRequestBody):
-    """
-    Обновление глобальных настроек модели
-
-    :param request: ModelSettingsRequestBody с настраиваемыми параметрами
-    :return: Подтверждение обновления настроек
-    """
     global global_model_settings
     try:
         global_model_settings.update({
@@ -134,14 +114,10 @@ async def update_model_settings(request: ModelSettingsRequestBody):
             "top_p": request.top_p
         })
         logger.info(f"Обновлены настройки модели: {global_model_settings}")
-        return {
-            "message": "Настройки модели обновлены",
-            "settings": global_model_settings
-        }
+        return {"message": "Настройки модели обновлены", "settings": global_model_settings}
     except Exception as e:
         logger.error(f"Ошибка обновления настроек: {str(e)}")
         raise HTTPException(status_code=500, detail="Ошибка обновления настроек.")
-
 
 @router.post("/query")
 async def process_query(request: QueryRequestBody):
@@ -230,3 +206,22 @@ async def process_query(request: QueryRequestBody):
     except Exception as e:
         logger.error(f"Ошибка обработки запроса: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/save_token")
+async def save_token(request: TokenRequestBody):
+    try:
+        # Проверяем, существует ли .env и нужно ли его обновить
+        current_token = os.getenv("HF_TOKEN")
+        if current_token != request.token:
+            with open(ENV_PATH, "w") as f:
+                f.write(f"HF_TOKEN={request.token}\n")
+            # Перезагружаем переменные окружения
+            load_dotenv(dotenv_path=ENV_PATH, override=True)
+            global HF_TOKEN
+            HF_TOKEN = os.getenv("HF_TOKEN")
+            logger.info("Токен успешно сохранен в .env")
+        return {"message": "Токен сохранен"}
+    except Exception as e:
+        logger.error(f"Ошибка при сохранении токена: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Ошибка при сохранении токена: {str(e)}")
