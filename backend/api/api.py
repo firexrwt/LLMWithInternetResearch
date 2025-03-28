@@ -119,6 +119,7 @@ async def update_model_settings(request: ModelSettingsRequestBody):
         logger.error(f"Ошибка обновления настроек: {str(e)}")
         raise HTTPException(status_code=500, detail="Ошибка обновления настроек.")
 
+
 @router.post("/query")
 async def process_query(request: QueryRequestBody):
     global llm_instance, global_model_settings, conversation_histories
@@ -165,7 +166,7 @@ async def process_query(request: QueryRequestBody):
                 Keep the conversation context.
                 You must answer in the same language as the user's question.
                 Do not repeat the question. Answer in a complete sentence with useful information.
-                
+
                 Conversation context:
                 {history_text}
 

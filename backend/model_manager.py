@@ -18,6 +18,16 @@ class ModelManager:
     def ensure_models_dir(self):
         os.makedirs(self.MODELS_DIR, exist_ok=True)
 
+    def get_model_path(self, model_name: str) -> str:
+        available_models = self.get_available_models()
+        model_info = next((m for m in available_models if m["name"] == model_name), None)
+
+        if not model_info:
+            raise ValueError(f"Модель {model_name} не найдена на Hugging Face.")
+
+        local_path = os.path.join(self.MODELS_DIR, model_info["file_name"])  # Используем глобальную переменную
+        return local_path
+
     def get_available_models(self) -> List[Dict]:
         current_time = time.time()
 
@@ -156,3 +166,28 @@ class ModelManager:
             "type": model_type,
             "size": self.get_file_size(model_info.id, file_name)
         }
+
+    def download_model(self, model_name: str) -> str:  # Функция для загрузки модели
+        available_models = self.get_available_models()
+        model_info = next((m for m in available_models if m["name"] == model_name), None)
+
+        if not model_info:
+            raise ValueError(f"Модель {model_name} не найдена на Hugging Face.")
+
+        if not model_info["file_name"]:
+            raise ValueError(f"У модели {model_name} нет GGUF-файла.")
+
+        local_path = os.path.join(self.MODELS_DIR, model_info["file_name"])
+
+        if os.path.exists(local_path):
+            print(f"Модель {model_name} уже загружена.")
+            return local_path
+
+        print(f"Скачивание модели {model_name}...")
+        try:
+            hf_hub_download(repo_id=model_info["repo_id"], filename=model_info["file_name"], local_dir=self.MODELS_DIR)
+            print(f"Модель {model_name} успешно загружена.")
+            return local_path
+        except Exception as e:
+            print(f"Ошибка при загрузке модели {model_name}: {e}")
+            raise
