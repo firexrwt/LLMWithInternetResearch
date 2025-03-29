@@ -1,439 +1,840 @@
+/* --- Переменные и Глобальные Стили --- */
 :root {
-  --bg-dark: #121420;
-  --bg-dark-light: #1A1E2C;
-  --bg-element: #242836;
-  --text-primary: #E0E6F0;
-  --text-secondary: #8E97A6;
-  --accent-color: #5D6CD3;
-  --accent-hover: #4A56B3;
-  --border-radius: 20px;
-  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.15);
+    /* Цвета (остаются без изменений) */
+    --bg-dark: #121420;
+    --bg-dark-light: #1A1E2C;
+    --bg-element: #242836;
+    --bg-element-hover: #2d3244;
+    --text-primary: #E0E6F0;
+    --text-secondary: #8E97A6;
+    --text-placeholder: #6a7383;
+    --accent-color: #5D6CD3;
+    --accent-hover: #4A56B3;
+    --accent-active: #3e479c;
+    --danger-color: #e54b4b;
+    --danger-hover: #c73e3e;
+    --success-color: #4caf50;
+    --border-color: rgba(255, 255, 255, 0.08);
+
+    /* --- Увеличенные Радиусы Скругления --- */
+    --border-radius-s: 10px; /* Было 8px */
+    --border-radius-m: 16px; /* Было 12px */
+    --border-radius-l: 24px; /* Было 18px */
+    --border-radius-xl: 30px; /* Новый: для крупных элементов */
+    --border-radius-pill: 9999px; /* Новый: для полностью скругленных краев */
+
+    /* Тени и переходы (остаются без изменений) */
+    --shadow-soft: 0 8px 25px rgba(0, 0, 0, 0.2);
+    --shadow-medium: 0 4px 15px rgba(0, 0, 0, 0.15);
+    --transition-speed: 0.25s;
 }
 
 * {
-  box-sizing: border-box;
-  scrollbar-width: thin;
-  scrollbar-color: var(--bg-element) var(--bg-dark);
-  transition: all 0.3s ease;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: var(--bg-element) var(--bg-dark-light);
+}
+
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: var(--border-radius-s); /* Скругляем трек */
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: var(--bg-element);
+    border-radius: var(--border-radius-s); /* Скругляем ползунок */
+    border: 2px solid var(--bg-dark-light);
+}
+
+.modal-content-scrollable::-webkit-scrollbar-thumb {
+    border: 2px solid var(--bg-dark-light);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background-color: var(--accent-color);
 }
 
 body {
-  margin: 0;
-  font-family: 'Inter', 'SF Pro Display', -apple-system, system-ui, sans-serif;
-  background-color: var(--bg-dark);
-  color: var(--text-primary);
-  line-height: 1.6;
+    margin: 0;
+    font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
 }
 
+button {
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+input, textarea, select {
+    font-family: inherit;
+    background-color: var(--bg-element);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-m); /* --- Увеличено скругление --- */
+    padding: 10px 15px; /* Немного увеличим паддинг для гармонии */
+    transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+}
+
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(93, 108, 211, 0.3);
+}
+
+input::placeholder, textarea::placeholder {
+    color: var(--text-placeholder);
+}
+
+/* --- Основная Структура --- */
 .app-container {
-  display: flex;
-  height: 100vh;
-  max-width: 1600px;
-  margin: 0 auto;
-  background-color: var(--bg-dark-light);
-  border-radius: 30px;
-  overflow: hidden;
-  box-shadow: var(--shadow-soft);
+    display: flex;
+    height: 100vh;
+    max-height: 100vh;
+    max-width: 1800px;
+    margin: 0 auto;
+    background-color: var(--bg-dark-light);
+    border-radius: 0; /* Оставляем контейнер приложения угловатым для полноэкранного вида */
+    overflow: hidden;
+    box-shadow: var(--shadow-soft);
 }
 
+/* --- Сайдбар --- */
 .sidebar {
-  width: 300px;
-  background-color: var(--bg-element);
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid rgba(255,255,255,0.05);
+    width: 280px;
+    background-color: var(--bg-dark);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color);
+    flex-shrink: 0;
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
 .sidebar-header {
-  padding: 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 20px 15px 15px 15px; /* Немного изменим паддинги */
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 .sidebar-footer {
-  padding: 20px;
-  border-top: 1px solid rgba(255,255,255,0.05);
+    padding: 15px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-shrink: 0;
 }
 
 .chat-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px;
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 10px;
 }
 
 .new-chat-button {
-  width: 100%;
-  background-color: var(--accent-color);
-  color: white;
-  border: none;
-  padding: 15px;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  font-weight: 600;
+    width: 100%;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 12px 15px;
+    border-radius: var(--border-radius-l); /* --- Увеличено скругление --- */
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.new-chat-button:hover:not(:disabled) {
+    background-color: var(--accent-hover);
+}
+
+.new-chat-button:active:not(:disabled) {
+    background-color: var(--accent-active);
 }
 
 .chat-tab {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 15px;
-  margin-bottom: 8px;
-  background-color: rgba(255,255,255,0.05);
-  border-radius: 15px;
-  cursor: pointer;
-  transition: background-color 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px; /* Увеличим паддинг */
+    margin-bottom: 8px; /* Увеличим отступ */
+    background-color: var(--bg-element);
+    border-radius: var(--border-radius-m); /* --- Увеличено скругление --- */
+    cursor: pointer;
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+    overflow: hidden;
 }
 
 .chat-tab:hover {
-  background-color: rgba(255,255,255,0.1);
+    background-color: var(--bg-element-hover);
 }
 
 .chat-tab.active {
-  background-color: var(--accent-color);
-  color: white;
+    background-color: var(--accent-color);
+    color: white;
+    font-weight: 500;
 }
 
-.chat-tab button {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  opacity: 0.6;
+.chat-tab.active:hover {
+    background-color: var(--accent-hover);
 }
 
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--bg-dark);
+.chat-tab-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 10px;
+    flex-grow: 1;
 }
 
-.header {
-  padding: 20px 30px;
-  background-color: var(--bg-element);
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+.delete-chat-button {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 1.1rem;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity var(--transition-speed), color var(--transition-speed);
+    flex-shrink: 0;
 }
 
-.chat-container {
-  flex: 1;
-  overflow-y: auto;
-  padding: 30px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+.chat-tab:hover .delete-chat-button {
+    opacity: 0.7;
 }
 
-.message {
-  max-width: 80%;
-  padding: 15px;
-  border-radius: 15px;
-  align-self: flex-start;
+.chat-tab .delete-chat-button:hover {
+    opacity: 1;
+    color: var(--danger-color);
 }
 
-.message-user {
-  background-color: var(--bg-element);
-  align-self: flex-end;
-  margin-left: auto;
+.chat-tab.active .delete-chat-button {
+    opacity: 0.7;
+    color: rgba(255, 255, 255, 0.7);
 }
 
-.message-assistant {
-  background-color: var(--accent-color);
-  color: white;
+.chat-tab.active .delete-chat-button:hover {
+    color: white;
 }
 
-.input-container {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 20px 30px;
-  background-color: var(--bg-element);
-  border-top: 1px solid rgba(255,255,255,0.05);
-  position: relative;
-}
-
-.input-field-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.model-selector {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  background-color: var(--bg-dark-light);
-  color: var(--text-primary);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px;
-  padding: 5px 10px;
-  font-size: 0.8rem;
-  appearance: none;
-  cursor: pointer;
-  z-index: 10;
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.model-selector:focus {
-  outline: none;
-  border-color: var(--accent-color);
-}
-
-.input-field {
-  width: 100%;
-  background-color: var(--bg-dark-light);
-  color: var(--text-primary);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: var(--border-radius);
-  padding: 15px;
-  padding-bottom: 50px;
-  font-size: 1rem;
-  resize: none;
-  transition: all 0.3s ease;
-}
-
-.input-field:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(93, 108, 211, 0.2);
-}
-
-.input-field:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.send-button {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  background-color: var(--accent-color);
-  color: white;
-  border: none;
-  border-radius: 15px;
-  padding: 10px 20px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background-color 0.2s;
-}
-
-.send-button:hover {
-  background-color: var(--accent-hover);
-}
-
-.send-button:disabled {
-  background-color: var(--text-secondary);
-  cursor: not-allowed;
-}
-
-.modal {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: var(--bg-element);
-  padding: 10px;
-  padding-top: 0%;
-  border-radius: var(--border-radius);
-  width: 500px;
-  height: 80vh;
-  overflow-y: auto;
-}
-
-.tab-container {
-  position: sticky;
-  top: 0;
-  display: flex;
-  background-color: #242836;
-  padding-top: 1%;
-}
-
-.tab-button {
-  flex: 1;
-  padding: 12px 20px;
-  cursor: pointer;
-  background: none;
-  border: none;
-  font-size: 0.93rem;
-  font-weight: bold;
-  color: #bbb;
-  text-align: center;
-  transition: all 0.3s;
-  border-bottom: 2px solid transparent;
-}
-
-.tab-button:hover {
-  color: #fff;
-}
-
-.tab-button.active {
-  color: #fff;
-  border-bottom: 2px solid #6a5acd;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.model-list {
-  list-style-type: none;
-  padding: 0;
-}
-
-.model-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-}
-
-.model-action-button {
-  padding: 8px 15px;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.model-action-button.install {
-  background-color: var(--accent-color);
-  color: white;
-}
-
-.model-action-button.delete {
-  background-color: rgba(255, 0, 0, 0.1);
-  color: red;
+.loading-placeholder, .placeholder-message {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 20px;
+    font-style: italic;
 }
 
 .manage-models-button {
-  width: 100%;
-  background-color: var(--accent-color);
-  color: white;
-  border: none;
-  padding: 15px;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  font-weight: 600;
+    width: 100%;
+    background-color: var(--bg-element);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 12px 15px;
+    border-radius: var(--border-radius-m); /* --- Увеличено скругление --- */
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-top: 0 !important;
 }
 
-/* Стили для настроек модели */
+.manage-models-button:hover:not(:disabled) {
+    background-color: var(--bg-element-hover);
+    border-color: var(--accent-color);
+}
+
+/* --- Основной Контент --- */
+.main-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-dark-light);
+    overflow: hidden;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.header {
+    padding: 15px 25px;
+    background-color: var(--bg-dark);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.header-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.header-model-info {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    background-color: var(--bg-element);
+    padding: 5px 10px; /* Немного увеличим */
+    border-radius: var(--border-radius-m); /* --- Увеличено скругление --- */
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* --- Контейнер Чата --- */
+.chat-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 25px; /* Увеличим отступы чата */
+    display: flex;
+    flex-direction: column;
+    gap: 18px; /* Увеличим расстояние между сообщениями */
+}
+
+.message {
+    max-width: 85%;
+    padding: 15px 20px; /* Увеличим паддинги сообщения */
+    border-radius: var(--border-radius-l); /* --- Базовое большое скругление --- */
+    word-wrap: break-word;
+    line-height: 1.5;
+    position: relative;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Легкая тень для сообщений */
+}
+
+.message-loading {
+    opacity: 0.7;
+    font-style: italic;
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 0.9;
+    }
+}
+
+.message p:last-child {
+    margin-bottom: 0;
+}
+
+.message code {
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 0.2em 0.4em;
+    border-radius: var(--border-radius-s); /* --- Малое скругление для кода --- */
+    font-size: 0.9em;
+    word-wrap: break-word;
+}
+
+.message pre {
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 12px 15px; /* Увеличим паддинг блока кода */
+    border-radius: var(--border-radius-m); /* --- Среднее скругление для блока кода --- */
+    overflow-x: auto;
+    font-size: 0.9em;
+}
+
+.message pre code {
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0; /* Без скругления внутри pre */
+    word-wrap: normal;
+}
+
+.message strong {
+    font-weight: 600;
+}
+
+.message a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+.message-user a {
+    color: var(--accent-color);
+}
+
+.message-assistant a {
+    color: lightblue;
+}
+
+/* Делаем разные углы у сообщений для вида "пузыря" */
+.message-user {
+    background-color: var(--bg-element);
+    align-self: flex-end;
+    margin-left: auto;
+    border-radius: var(--border-radius-l) var(--border-radius-s) var(--border-radius-l) var(--border-radius-l); /* Top-L, Top-R, Bottom-R, Bottom-L */
+}
+
+.message-assistant {
+    background-color: var(--accent-color);
+    color: white;
+    align-self: flex-start;
+    margin-right: auto;
+    border-radius: var(--border-radius-s) var(--border-radius-l) var(--border-radius-l) var(--border-radius-l); /* Top-L, Top-R, Bottom-R, Bottom-L */
+}
+
+.message-assistant strong {
+    color: #f0f0f0;
+}
+
+/* --- Поле Ввода --- */
+.input-container {
+    padding: 15px 25px;
+    background-color: var(--bg-dark);
+    border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.input-field-wrapper {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.model-selector {
+    flex-shrink: 0;
+    background-color: var(--bg-element);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: var(--border-radius-l); /* --- Увеличено скругление --- */
+    padding: 8px 15px; /* Увеличим паддинг */
+    font-size: 0.85rem;
+    appearance: none;
+    cursor: pointer;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 44px; /* Увеличим высоту */
+    line-height: 1.5;
+}
+
+.model-selector:hover:not(:disabled) {
+    border-color: var(--accent-color);
+}
+
+.input-field {
+    flex-grow: 1;
+    background-color: var(--bg-element);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-l); /* --- Увеличено скругление --- */
+    padding: 12px 20px; /* Увеличим паддинг */
+    padding-right: 55px; /* Место для кнопки отправки */
+    font-size: 1rem;
+    resize: none;
+    line-height: 1.4;
+    min-height: 44px; /* Минимальная высота как у селектора */
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.input-field:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(93, 108, 211, 0.2);
+}
+
+.input-field:disabled {
+    opacity: 0.6;
+    background-color: var(--bg-element);
+}
+
+.send-button {
+    position: absolute;
+    bottom: 4px; /* Отступ снизу */
+    right: 4px; /* Отступ справа */
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-pill); /* --- Полное скругление --- */
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.3rem;
+    line-height: 1;
+}
+
+.send-button:hover:not(:disabled) {
+    background-color: var(--accent-hover);
+}
+
+.send-button:disabled {
+    background-color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+/* --- Спиннер --- */
+.spinner {
+    display: inline-block;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    width: 18px;
+    height: 18px;
+    animation: spin 1s linear infinite;
+}
+
+.spinner.white {
+    border-top-color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.spinner.small {
+    width: 14px;
+    height: 14px;
+    border-width: 2px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* --- Модальные Окна --- */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.65);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+    padding: 20px;
+}
+
+.modal {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-dark-light);
+    border-radius: var(--border-radius-xl); /* --- Увеличено скругление --- */
+    width: 100%;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: var(--shadow-medium);
+    border: 1px solid var(--border-color);
+}
+
+.manage-models-modal {
+    max-width: 800px;
+}
+
+.settings-modal {
+    max-width: 550px;
+}
+
 .modal-header {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+    padding: 20px 25px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
-.model-settings {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  padding: 20px;
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1.3;
 }
 
-.model-settings-input {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.modal-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-top: 5px;
+    margin-bottom: 0;
 }
 
-.model-settings-input label {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+.modal-content-scrollable {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 15px 0 20px 0;
 }
 
-.model-settings-input input[type="number"] {
-  width: 80px;
-  background-color: var(--bg-dark-light);
-  color: var(--text-primary);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px;
-  padding: 5px;
+.modal-content-scrollable .tab-container,
+.modal-content-scrollable .sort-container,
+.modal-content-scrollable .model-list-container,
+.modal-content-scrollable .model-settings {
+    padding-left: 25px;
+    padding-right: 25px;
 }
 
-/* Стили для токена */
 .token-container {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 10px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    padding-top: 15px;
 }
 
 .token-input {
-  flex: 1;
-  background-color: var(--bg-dark-light);
-  color: var(--text-primary);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px;
-  padding: 8px 12px;
-  font-size: 0.9rem;
+    flex: 1 1 250px;
+    background-color: var(--bg-element);
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    border-radius: var(--border-radius-m); /* --- Скругление --- */
 }
 
-.token-input:focus {
-  outline: none;
-  border-color: var(--accent-color);
+.token-save-button, .token-create-button {
+    border: none;
+    border-radius: var(--border-radius-m); /* --- Скругление --- */
+    padding: 8px 15px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    flex-shrink: 0;
 }
 
 .token-save-button {
-  background-color: var(--accent-color);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  padding: 8px 15px;
-  cursor: pointer;
-  font-weight: 600;
+    background-color: var(--accent-color);
+    color: white;
 }
 
-.token-save-button:hover {
-  background-color: var(--accent-hover);
+.token-save-button:hover:not(:disabled) {
+    background-color: var(--accent-hover);
 }
 
 .token-create-button {
-  background-color: rgba(255,255,255,0.1);
-  color: var(--text-primary);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 10px;
-  padding: 8px 15px;
-  cursor: pointer;
-  font-weight: 600;
+    background-color: var(--bg-element);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
 }
 
 .token-create-button:hover {
-  background-color: rgba(255,255,255,0.2);
+    background-color: var(--bg-element-hover);
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
 }
 
-/* Стили для сортировки */
+.tab-container {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+    padding-top: 0;
+    margin-bottom: 15px;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 12px 10px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-align: center;
+    transition: color var(--transition-speed), border-color var(--transition-speed);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;
+    white-space: nowrap;
+    border-radius: 0; /* Вкладки оставляем без скругления для вида */
+}
+
+.tab-button:hover {
+    color: var(--text-primary);
+}
+
+.tab-button.active {
+    color: var(--text-primary);
+    font-weight: 600;
+    border-bottom-color: var(--accent-color);
+}
+
 .sort-container {
-  padding: 15px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+    padding-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
 }
 
 .sort-container label {
-  color: var(--text-secondary);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
 }
 
 .sort-container select {
-  background-color: var(--bg-dark-light);
-  color: var(--text-primary);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px;
-  padding: 5px 10px;
-  cursor: pointer;
+    background-color: var(--bg-element);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: var(--border-radius-m); /* --- Скругление --- */
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 0.9rem;
 }
 
-.sort-container select:focus {
-  outline: none;
-  border-color: var(--accent-color);
+.model-list-container { /* Нет спец. стилей */
+}
+
+.model-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.model-item {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+    gap: 10px;
+}
+
+.model-item:last-child {
+    border-bottom: none;
+}
+
+.model-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-width: 200px;
+    word-break: break-word;
+}
+
+.model-info strong {
+    font-weight: 500;
+    font-size: 0.95rem;
+    line-height: 1.3;
+}
+
+.model-info span {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.3;
+}
+
+.model-action-button {
+    padding: 7px 15px;
+    border: none;
+    border-radius: var(--border-radius-m); /* --- Скругление --- */
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    min-width: 95px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.model-action-button.install {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.model-action-button.install:hover:not(:disabled) {
+    background-color: var(--accent-hover);
+}
+
+.model-action-button.delete {
+    background-color: rgba(229, 75, 75, 0.15);
+    color: var(--danger-color);
+    border: 1px solid rgba(229, 75, 75, 0.3);
+}
+
+.model-action-button.delete:hover:not(:disabled) {
+    background-color: rgba(229, 75, 75, 0.25);
+    border-color: rgba(229, 75, 75, 0.5);
+    color: var(--danger-hover);
+}
+
+.model-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-top: 10px;
+}
+
+.model-settings-input {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.model-settings-input label {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    flex-basis: calc(100% - 110px);
+    line-height: 1.3;
+}
+
+.model-settings-input input[type="number"] {
+    width: 90px;
+    background-color: var(--bg-element);
+    text-align: right;
+    flex-shrink: 0;
+    border-radius: var(--border-radius-m); /* --- Скругление --- */
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 15px 25px;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--bg-dark);
+    border-bottom-left-radius: var(--border-radius-l); /* Синхронизируем с .modal */
+    border-bottom-right-radius: var(--border-radius-l);
+    flex-shrink: 0;
+    margin-top: auto;
+}
+
+.modal-button {
+    padding: 8px 18px;
+    border: none;
+    border-radius: var(--border-radius-m); /* --- Скругление --- */
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.modal-button.primary {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.modal-button.primary:hover:not(:disabled) {
+    background-color: var(--accent-hover);
+}
+
+.modal-button.secondary {
+    background-color: var(--bg-element);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.modal-button.secondary:hover:not(:disabled) {
+    background-color: var(--bg-element-hover);
+    border-color: var(--text-secondary);
 }

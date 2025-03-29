@@ -1,0 +1,81 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "node": true
+  },
+  "extends": [
+    "eslint:recommended",
+    // Базовые рекомендованные правила ESLint
+    "plugin:react/recommended",
+    // Рекомендованные правила для React
+    "plugin:react/jsx-runtime"
+    // Для нового JSX-трансформера React 17+
+  ],
+  "parserOptions": {
+    "ecmaFeatures": {
+      "jsx": true
+      // Разрешить парсинг JSX
+    },
+    "ecmaVersion": "latest",
+    // Использовать последнюю версию ECMAScript
+    "sourceType": "module"
+    // Разрешить использование import/export
+  },
+  "plugins": [
+    "react",
+    // Подключить плагин eslint-plugin-react
+    "react-hooks"
+  ],
+  "rules": {
+    // --- Основные правила ESLint (можешь настроить или убрать) ---
+    "indent": [
+      "warn",
+      2
+    ],
+    // Отступ в 2 пробела (предупреждение)
+    "linebreak-style": [
+      "warn",
+      "unix"
+    ],
+    // Стиль переноса строк Unix (предупреждение)
+    "quotes": [
+      "warn",
+      "double"
+    ],
+    // Использовать двойные кавычки (предупреждение)
+    "semi": [
+      "warn",
+      "always"
+    ],
+    // Требовать точки с запятой (предупреждение)
+    "no-unused-vars": [
+      "warn",
+      {
+        "args": "none"
+      }
+    ],
+    // Предупреждать о неиспользуемых переменных (кроме аргументов функций)
+
+    // --- Правила React ---
+    "react/prop-types": "off",
+    // Отключаем проверку prop-types (если не используешь или есть TypeScript)
+
+    // --- Правила React Hooks (КЛЮЧЕВАЯ ЧАСТЬ) ---
+    "react-hooks/rules-of-hooks": "error",
+    // Проверять правила хуков (ошибка)
+    "react-hooks/exhaustive-deps": "warn"
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+      // Автоматически определять версию React
+    }
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    "build/",
+    "dist/"
+  ]
+  // Игнорировать папки
+}

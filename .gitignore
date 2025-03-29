@@ -13,3 +13,4 @@ backend/__pycache__/main.cpython-310.pyc
 backend/__pycache__/model_manager.cpython-310.pyc
 /.vs/
 .env
+*.db
