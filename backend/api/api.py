@@ -1,16 +1,16 @@
 import os
 import logging
-import torch
+
+import GPUtil
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
-from backend.model_manager import ModelManager  # Убедись, что путь импорта верный
+from backend.model_manager import ModelManager
 from llama_cpp import Llama
-# deque больше не нужен
 from typing import Dict, Optional, List
 import uuid
 from dotenv import load_dotenv
-import sqlite3  # <--- Добавили SQLite
-import datetime  # <--- Добавили datetime
+import sqlite3
+import datetime
 
 # --- Настройка Базы Данных ---
 # Путь к .env и базе данных относительно текущего файла api.py
@@ -226,30 +226,37 @@ class TokenRequestBody(BaseModel):
 
 
 def get_gpu_layers():
-    if torch.cuda.is_available():
-        try:
-            device_name = torch.cuda.get_device_name(0)
-            logger.info(f"CUDA доступна. Используем устройство: {device_name}")
-            gpu_memory_gb = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)
-            logger.info(f"Доступно видеопамяти: {gpu_memory_gb:.2f} GB")
-            # Примерная логика слоев (можно настроить)
-            if gpu_memory_gb >= 22:
-                return -1  # -1 = все слои на GPU
-            elif gpu_memory_gb >= 15:
-                return 40
-            elif gpu_memory_gb >= 10:
-                return 30
-            elif gpu_memory_gb >= 7:
-                return 20
-            elif gpu_memory_gb >= 5:
-                return 15
-            else:
-                return 10
-        except Exception as e:
-            logger.error(f"Ошибка при получении информации о CUDA: {e}")
-            return 0  # Возвращаемся к CPU в случае ошибки
-    logger.info("CUDA недоступна или не найдена. Будет использован CPU.")
-    return 0
+    try:
+        gpus = GPUtil.getGPUs()
+        if not gpus:
+            logger.info("GPU не найдено — будет использован CPU.")
+            return 0
+
+        gpu0 = gpus[0]
+        total_mem = gpu0.memoryTotal  # в МБ
+        logger.info(f"Найден GPU: {gpu0.name}, память: {total_mem / 1024:.1f} GB")
+
+        if total_mem >= 22000:
+            logger.info("Установлено: все слои модели на GPU (n_gpu_layers = -1)")
+            return -1
+        elif total_mem >= 15000:
+            logger.info("Установлено: 40 слоёв на GPU")
+            return 40
+        elif total_mem >= 10000:
+            logger.info("Установлено: 30 слоёв на GPU")
+            return 30
+        elif total_mem >= 7000:
+            logger.info("Установлено: 20 слоёв на GPU")
+            return 20
+        elif total_mem >= 5000:
+            logger.info("Установлено: 15 слоёв на GPU")
+            return 15
+        else:
+            logger.info("Установлено: 10 слоёв на GPU")
+            return 10
+    except Exception as e:
+        logger.warning(f"Ошибка при определении GPU: {e} — будет использован CPU.")
+        return 0
 
 
 class ModelRequestBody(BaseModel):
@@ -272,7 +279,6 @@ class QueryRequestBody(ModelSettingsRequestBody):  # Настройки можн
 def load_model(model_name: str):
     global llm_instance, model_manager
     if model_manager is None:
-        # Этого не должно происходить, т.к. manager инициализируется в /models
         logger.error("ModelManager не инициализирован перед загрузкой модели!")
         raise HTTPException(status_code=500, detail="Менеджер моделей не готов.")
     try:
@@ -282,32 +288,29 @@ def load_model(model_name: str):
             raise HTTPException(status_code=404, detail=f"Файл модели {model_name} не найден. Установите ее.")
 
         gpu_layers = get_gpu_layers()
-        # Увеличиваем контекст и отключаем лишний вывод llama-cpp
-        n_ctx = 4096  # Важно: должно соответствовать возможностям модели
+        n_ctx = 4096
         logger.info(f"Загрузка модели: {model_name} (Путь: {model_path})")
         logger.info(f"Параметры Llama: n_ctx={n_ctx}, n_gpu_layers={gpu_layers}")
 
-        # Освобождаем память от предыдущей модели, если она есть
+        # Освобождаем ресурсы предыдущей модели
         if llm_instance:
             logger.info("Освобождаем ресурсы предыдущей модели...")
             del llm_instance
             llm_instance = None
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
             logger.info("Ресурсы освобождены.")
 
         llm_instance = Llama(
             model_path=model_path,
             n_ctx=n_ctx,
-            n_threads=os.cpu_count() // 2,  # Используем половину доступных потоков CPU
+            n_threads=os.cpu_count() // 2,
             n_gpu_layers=gpu_layers,
-            use_mmap=True,  # Ускоряет загрузку
-            use_mlock=False,  # Может вызвать проблемы с памятью, отключаем
-            verbose=False  # Отключаем стандартный вывод llama.cpp
+            use_mmap=True,
+            use_mlock=False,
+            verbose=False
         )
         logger.info(f"Модель {model_name} успешно загружена.")
     except Exception as e:
-        logger.exception(f"Критическая ошибка загрузки модели {model_name}: {e}")  # Логируем traceback
+        logger.exception(f"Критическая ошибка загрузки модели {model_name}: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка загрузки модели: {str(e)}")
 
 
