@@ -14,3 +14,8 @@ backend/__pycache__/model_manager.cpython-310.pyc
 /.vs/
 .env
 *.db
+/build
+/dist
+/frontend/build
+/frontend/dist_electron
+frontend/package-lock.json
