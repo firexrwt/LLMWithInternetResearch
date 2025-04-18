@@ -1,14 +1,21 @@
 {
-  "name": "llmresearch-frontend",
-  "version": "1.0.0",
+  "name": "neurabox-frontend",
+  "version": "0.1.0",
+  "description": "NeuraBox Frontend",
   "private": true,
+  "author": "firexrwt",
+  "main": "public/electron.js",
+  "homepage": "./",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "electron": "electron ."
+    "electron:dev": "electron .",
+    "postinstall": "electron-builder install-app-deps",
+    "pack": "electron-builder --dir",
+    "dist": "npm run build && electron-builder"
   },
   "dependencies": {
-    "date-fns": "^4.1.0",
+    "date-fns": "^3.6.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.5.0",
@@ -18,11 +25,10 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "tailwindcss": "^3.2.7",
-    "webpack": "^5.88.2",
-    "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^5.2.0"
+    "electron": "^31.1.0",
+    "electron-builder": "^25.0.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "tailwindcss": "^3.2.7"
   },
   "browserslist": {
     "production": [
@@ -35,5 +41,40 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "build": {
+    "appId": "com.firexrwt.neurabox",
+    "productName": "NeuraBox",
+    "directories": {
+      "output": "dist_electron"
+    },
+    "files": [
+      "build/**/*",
+      "public/electron.js",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../dist/backend.exe",
+        "to": "app/backend/backend.exe",
+        "filter": [
+          "backend.exe"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "firexrwt",
+      "repo": "NeuraBox"
+    }
   }
 }

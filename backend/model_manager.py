@@ -1,13 +1,19 @@
 import os
 import time
+import platformdirs
 from typing import List, Dict
 from huggingface_hub import HfApi, hf_hub_download, ModelInfo  # Добавил ModelInfo для аннотации
 import re
 
+APP_NAME = "NeuraBox"
+APP_AUTHOR = "NeuraBoxTeam"
+
+
+USER_DATA_DIR = platformdirs.user_data_dir(APP_NAME, APP_AUTHOR)
+
 
 class ModelManager:
-    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    MODELS_DIR = os.path.join(BASE_DIR, "models")
+    MODELS_DIR = os.path.join(USER_DATA_DIR, "models")
     CACHE_TIME = 1800  # 30 минут кеширования
 
     def __init__(self, hf_token: str | None = None):  # Добавил аннотацию типа
@@ -17,7 +23,12 @@ class ModelManager:
         self.ensure_models_dir()
 
     def ensure_models_dir(self):
-        os.makedirs(self.MODELS_DIR, exist_ok=True)
+        # Создаем папку MODELS_DIR (e.g., %APPDATA%\NeuraBox\models), если ее нет
+        try:
+            os.makedirs(self.MODELS_DIR, exist_ok=True)
+        except OSError as e:
+            print(f"Ошибка создания папки моделей {self.MODELS_DIR}: {e}")
+            raise  # Передаем ошибку дальше
 
     def get_model_path(self, model_name: str) -> str | None:  # Может вернуть None, если файла нет
         available_models = self.get_available_models()
@@ -42,7 +53,7 @@ class ModelManager:
                         return local_path_repo
 
             # Если ничего не найдено
-            print(f"Модель {model_name} не найдена ни локально, ни в кеше Hugging Face.")
+            print(f"Модель {model_name} не найдена в {self.MODELS_DIR} или в кеше Hugging Face.")
             return None  # Возвращаем None, если путь не найден
 
         # Используем file_name из найденного model_info
@@ -52,8 +63,7 @@ class ModelManager:
             return local_path
         else:
             # Если в кеше модель есть, но файла нет (например, удалили вручную)
-            print(
-                f"Файл {model_info['file_name']} для модели {model_name} не найден локально, хотя информация о модели есть.")
+            print(f"Файл {model_info['file_name']} для модели {model_name} не найден в {self.MODELS_DIR}.")
             return None  # Возвращаем None
 
     def get_available_models(self) -> List[Dict]:
@@ -322,14 +332,14 @@ class ModelManager:
             local_path = os.path.join(self.MODELS_DIR, file_name)
 
             if os.path.exists(local_path):
-                print(f"Модель {model_repo_id} (файл {file_name}) уже загружена.")
+                print(f"Модель {model_repo_id} (файл {file_name}) уже загружена в {self.MODELS_DIR}.")
                 # Обновим статус в кеше, если модель есть в кеше
                 for model in self.cache["models"]:
                     if model.get("repo_id") == model_repo_id or model.get("file_name") == file_name:
                         model["installed"] = True
                 return local_path
 
-            print(f"Скачивание файла {file_name} из репозитория {model_repo_id}...")
+            print(f"Скачивание файла {file_name} из репозитория {model_repo_id} в {self.MODELS_DIR}...")
             # Убедимся, что директория существует
             self.ensure_models_dir()
 

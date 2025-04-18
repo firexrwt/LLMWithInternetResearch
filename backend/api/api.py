@@ -12,18 +12,44 @@ from dotenv import load_dotenv
 import sqlite3
 import datetime
 
-# --- Настройка Базы Данных ---
-# Путь к .env и базе данных относительно текущего файла api.py
-# Предполагаем, что api.py находится в backend/api/
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "../.."))  # Корень проекта
-ENV_PATH = os.path.join(BASE_DIR, ".env")
-DATABASE_PATH = os.path.join(BASE_DIR, "neurabox_chats.db")  # БД в корне проекта
+import platformdirs
 
-load_dotenv(dotenv_path=ENV_PATH)
+from backend.model_manager import ModelManager
+
+# --- Конец проверки импорта ---
+
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+
+APP_NAME = "NeuraBox"
+APP_AUTHOR = "NeuraBoxTeam"
+
+# Получаем папку данных пользователя (%APPDATA%\NeuraBox)
+USER_DATA_DIR = platformdirs.user_data_dir(APP_NAME, APP_AUTHOR)
+
+# Создаем эту папку и любые родительские папки, если их нет
+try:
+    os.makedirs(USER_DATA_DIR, exist_ok=True)
+    logger.info(f"Используется папка данных пользователя: {USER_DATA_DIR}")
+except OSError as e:
+    logger.error(f"Не удалось создать папку данных пользователя {USER_DATA_DIR}: {e}")
+    # Возможно, стоит выбросить исключение или завершить работу, если папка критична
+    raise  # Передаем ошибку дальше
+
+
+ENV_PATH = os.path.join(USER_DATA_DIR, ".env")
+DATABASE_PATH = os.path.join(USER_DATA_DIR, "neurabox_chats.db")
+
+logger.info(f"Ожидаемый путь к .env файлу: {ENV_PATH}")
+logger.info(f"Ожидаемый путь к базе данных: {DATABASE_PATH}")
+
+dotenv_loaded = load_dotenv(dotenv_path=ENV_PATH)
+if dotenv_loaded:
+    logger.info(f".env файл успешно загружен из {ENV_PATH}")
+else:
+    logger.info(f".env файл не найден или пуст по пути {ENV_PATH}")
 
 
 def init_db():
@@ -61,7 +87,7 @@ def init_db():
         conn.commit()
         logger.info(f"База данных инициализирована: {DATABASE_PATH}")
     except sqlite3.Error as e:
-        logger.error(f"Ошибка инициализации БД: {e}")
+        logger.error(f"Ошибка инициализации БД ({DATABASE_PATH}): {e}")
         raise
     finally:
         if conn:
@@ -79,7 +105,7 @@ def get_db_connection():
         conn.row_factory = sqlite3.Row  # Возвращать строки как словари
         return conn
     except sqlite3.Error as e:
-        logger.error(f"Ошибка подключения к БД: {e}")
+        logger.error(f"Ошибка подключения к БД ({DATABASE_PATH}): {e}")
         raise HTTPException(status_code=500, detail="Ошибка подключения к базе данных.")
 
 
@@ -548,7 +574,7 @@ async def save_token(request: TokenRequestBody):
             if model_manager:
                 model_manager.hf_token = HF_TOKEN
 
-            logger.info("Токен HF_TOKEN успешно сохранен/обновлен в .env")
+            logger.info(f"Токен HF_TOKEN успешно сохранен/обновлен в {env_file_path}")
             return {"message": "Токен успешно сохранен"}
 
         except Exception as e:
