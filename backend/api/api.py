@@ -336,7 +336,8 @@ def load_model(model_name: str):
         )
         logger.info(f"Модель {model_name} успешно загружена.")
     except Exception as e:
-        logger.exception(f"Критическая ошибка загрузки модели {model_name}: {e}")
+        logger.exception(
+            f"Поймано исключение при загрузке модели: Model={model_name}, Type={type(e).__name__}, Error={e}")
         raise HTTPException(status_code=500, detail=f"Ошибка загрузки модели: {str(e)}")
 
 

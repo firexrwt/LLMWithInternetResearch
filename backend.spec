@@ -12,8 +12,12 @@ a = Analysis(
     ['backend/main.py'], # Главный скрипт вашего FastAPI приложения
     pathex=['.'],        # Указываем PyInstaller искать модули в корневой папке проекта
     binaries=[
-        # Пытаемся автоматически собрать динамические библиотеки (.dll) для llama_cpp
-        *collect_dynamic_libs('llama_cpp'),
+        *collect_dynamic_libs('llama_cpp'), # Оставляем автоматический сбор
+        # --- Добавляем найденные вручную DLL для CUDA 12.8 ---
+        ('C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/bin/cublas64_12.dll', '.'),
+        ('C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/bin/cudart64_12.dll', '.'),
+        ('C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.8/bin/cublasLt64_12.dll', '.'),
+        # --- Конец добавления ---
     ],
     datas=[
         # Сюда можно добавлять не-Python файлы, если они нужны вашему коду
